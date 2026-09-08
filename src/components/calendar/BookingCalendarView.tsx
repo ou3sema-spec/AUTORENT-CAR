@@ -25,12 +25,14 @@ import {
   AlertTriangle,
   Maximize2,
   Minimize2,
+  Ban,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTranslation } from 'react-i18next';
 import { Booking, Vehicle } from '../../types';
 import { StatusBadge } from '../ui/StatusBadge';
 import { TactileButton } from '../ui/TactileButton';
+import { CancelBookingModal } from '../bookings/CancelBookingModal';
 
 interface BookingCalendarViewProps {
   onOpenBookingWizard?: (vehicleId?: string, startDate?: string) => void;
@@ -66,6 +68,7 @@ export const BookingCalendarView: React.FC<BookingCalendarViewProps> = ({
   const [expandedDateStr, setExpandedDateStr] = useState<string | null>(null);
 
   const [activeBookingModal, setActiveBookingModal] = useState<Booking | null>(null);
+  const [bookingToCancel, setBookingToCancel] = useState<Booking | null>(null);
   const [lastAutoAction, setLastAutoAction] = useState<'AUTO_CANCELLED' | 'AUTO_COMPLETED' | null>(null);
 
   // Close expanded cell when pressing Escape
@@ -986,6 +989,21 @@ export const BookingCalendarView: React.FC<BookingCalendarViewProps> = ({
                           </div>
                         )}
 
+                        {bk.status !== 'CANCELLED' && bk.status !== 'COMPLETED' && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setBookingToCancel(bk);
+                            }}
+                            className="min-h-[38px] px-2.5 py-1.5 rounded-lg bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-500/30 text-xs font-semibold transition flex items-center gap-1 cursor-pointer"
+                            title="Annuler cette réservation"
+                          >
+                            <Ban className="w-3.5 h-3.5 text-red-400" />
+                            <span className="hidden sm:inline">Annuler</span>
+                          </button>
+                        )}
+
                         {onOpenInvoice && (
                           <button
                             type="button"
@@ -1146,6 +1164,20 @@ export const BookingCalendarView: React.FC<BookingCalendarViewProps> = ({
                             <span>Retour</span>
                           </button>
                         )}
+                        {bk.status !== 'CANCELLED' && bk.status !== 'COMPLETED' && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setBookingToCancel(bk);
+                            }}
+                            className="px-2.5 py-1.5 rounded-lg bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-500/30 text-xs font-semibold transition flex items-center gap-1 cursor-pointer"
+                            title="Annuler la réservation"
+                          >
+                            <Ban className="w-3.5 h-3.5 text-red-400" />
+                            <span className="hidden sm:inline">Annuler</span>
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={(e) => {
@@ -1208,14 +1240,25 @@ export const BookingCalendarView: React.FC<BookingCalendarViewProps> = ({
               </div>
             </div>
 
-            {/* Auto Lifecycle status alerts */}
+            {/* Auto Lifecycle status alerts or Cancellation info */}
             {activeBookingModal.status === 'CANCELLED' && (
-              <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-start gap-2">
+              <div className="mb-4 p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-start gap-2.5">
                 <AlertTriangle className="w-4 h-4 flex-shrink-0 text-rose-400 mt-0.5" />
-                <div>
-                  <p className="font-bold">Réservation annulée automatiquement</p>
-                  <p className="text-rose-300/80 text-[11px] mt-0.5">
-                    La date de début ({activeBookingModal.startDate}) est dépassée sans enregistrement du check-in. Le véhicule a été libéré automatiquement et remis au statut Disponible.
+                <div className="space-y-1">
+                  <p className="font-bold text-rose-200">Réservation Annulée</p>
+                  {activeBookingModal.cancellationReason && (
+                    <p className="text-gray-200 text-[11px]">
+                      Motif : <span className="text-white font-medium">{activeBookingModal.cancellationReason}</span>
+                    </p>
+                  )}
+                  {activeBookingModal.cancelledAt && (
+                    <p className="text-slate-400 text-[10px]">
+                      Annulée le {new Date(activeBookingModal.cancelledAt).toLocaleString('fr-FR')} {activeBookingModal.cancelledBy ? `par ${activeBookingModal.cancelledBy}` : ''}
+                    </p>
+                  )}
+                  <p className="text-emerald-400 text-[11px] font-semibold flex items-center gap-1 mt-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Véhicule libéré et remis au statut DISPONIBLE.
                   </p>
                 </div>
               </div>
@@ -1225,9 +1268,9 @@ export const BookingCalendarView: React.FC<BookingCalendarViewProps> = ({
               <div className="mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-amber-400 mt-0.5" />
                 <div>
-                  <p className="font-bold">Réservation clôturée automatiquement (Check-out)</p>
+                  <p className="font-bold">Réservation clôturée (Check-out effectué)</p>
                   <p className="text-amber-300/80 text-[11px] mt-0.5">
-                    La date de fin de contrat ({activeBookingModal.endDate}) est atteinte. Le véhicule a été libéré automatiquement et remis au statut Disponible.
+                    Contrat clôturé. Le véhicule est remis au statut DISPONIBLE pour de nouvelles locations.
                   </p>
                 </div>
               </div>
@@ -1288,6 +1331,22 @@ export const BookingCalendarView: React.FC<BookingCalendarViewProps> = ({
                 </button>
               )}
 
+              {activeBookingModal.status !== 'CANCELLED' && activeBookingModal.status !== 'COMPLETED' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const toCancel = activeBookingModal;
+                    setActiveBookingModal(null);
+                    setBookingToCancel(toCancel);
+                  }}
+                  className="py-2.5 px-3 rounded-xl bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-500/40 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                  title="Annuler cette réservation"
+                >
+                  <Ban className="w-4 h-4 text-red-400" />
+                  <span>Annuler Réservation</span>
+                </button>
+              )}
+
               {onOpenInvoice && (
                 <button
                   type="button"
@@ -1304,6 +1363,14 @@ export const BookingCalendarView: React.FC<BookingCalendarViewProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Cancel Booking Modal */}
+      {bookingToCancel && (
+        <CancelBookingModal
+          booking={bookingToCancel}
+          onClose={() => setBookingToCancel(null)}
+        />
       )}
     </div>
   );

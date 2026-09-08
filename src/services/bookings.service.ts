@@ -144,19 +144,35 @@ export class BookingsService {
     reason: string,
     vehicle?: Vehicle,
     actor = 'Agent',
-    actorRole: UserRole = 'AGENT'
+    actorRole: UserRole = 'AGENT',
+    refundAmount?: number,
+    cancellationFee?: number
   ): Promise<{ success: boolean; error?: string }> {
+    const cancelledAt = new Date().toISOString();
+    const updates: Partial<Booking> = {
+      status: 'CANCELLED',
+      cancellationReason: reason,
+      cancelledAt,
+      cancelledBy: actor,
+      cancellationFee: cancellationFee !== undefined ? cancellationFee : booking.cancellationFee,
+      refundAmount: refundAmount !== undefined ? refundAmount : booking.refundAmount,
+      notes: booking.notes ? `${booking.notes}\n[Annulé: ${reason}]` : `[Annulé: ${reason}]`,
+    };
+
+    if (refundAmount !== undefined && refundAmount > 0) {
+      updates.paymentStatus = refundAmount >= (booking.paidAmount || booking.totalAmount) ? 'REFUNDED' : 'PARTIALLY_PAID';
+    } else if (booking.paymentStatus === 'PENDING') {
+      updates.paymentStatus = 'CANCELLED';
+    }
+
     const res = await this.updateBooking(
       booking,
-      {
-        status: 'CANCELLED',
-        notes: booking.notes ? `${booking.notes}\n[Annulé: ${reason}]` : `[Annulé: ${reason}]`,
-      },
+      updates,
       actor,
       actorRole
     );
 
-    if (res.success && vehicle && (vehicle.status === 'RESERVED' || vehicle.status === 'PREPARING')) {
+    if (res.success && vehicle && (vehicle.status === 'RESERVED' || vehicle.status === 'PREPARING' || vehicle.status === 'RENTED')) {
       await setFirestoreDoc('vehicles', vehicle.id, {
         ...vehicle,
         status: 'AVAILABLE',

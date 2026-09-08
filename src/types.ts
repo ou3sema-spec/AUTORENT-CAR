@@ -298,6 +298,7 @@ export interface Booking {
   tax: number;
   totalAmount: number;
   depositAmount: number;
+  depositStatus?: 'NON_ENCAISSEE' | 'ENCAISSEE' | 'RESTITUEE';
   paidAmount?: number;
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
@@ -315,6 +316,11 @@ export interface Booking {
   checkOutId?: string;
   invoiceNumber?: string;
   notes?: string;
+  cancellationReason?: string;
+  cancelledAt?: string;
+  cancelledBy?: string;
+  cancellationFee?: number;
+  refundAmount?: number;
   createdAt: string;
   updatedAt?: string;
 }

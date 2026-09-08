@@ -14,10 +14,13 @@ import {
   Car,
   User,
   Plus,
-  AlertCircle
+  AlertCircle,
+  Ban,
+  CheckCircle2,
 } from 'lucide-react';
 import { TactileButton } from '../ui/TactileButton';
 import { StatusBadge } from '../ui/StatusBadge';
+import { CancelBookingModal } from './CancelBookingModal';
 
 interface BookingsViewProps {
   onOpenBookingWizard: () => void;
@@ -33,6 +36,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
 
   const [activeStatusTab, setActiveStatusTab] = useState<'ALL' | BookingStatus>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
+  const [bookingToCancel, setBookingToCancel] = useState<Booking | null>(null);
 
   const filteredBookings = bookings.filter(b => {
     if (activeStatusTab !== 'ALL' && b.status !== activeStatusTab) return false;
@@ -90,6 +94,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
           { id: 'CONFIRMED', label: 'À Remettre', count: bookings.filter(b => b.status === 'CONFIRMED').length },
           { id: 'IN_PROGRESS', label: 'En Cours', count: bookings.filter(b => b.status === 'IN_PROGRESS').length },
           { id: 'COMPLETED', label: 'Clôturées', count: bookings.filter(b => b.status === 'COMPLETED').length },
+          { id: 'CANCELLED', label: 'Annulées', count: bookings.filter(b => b.status === 'CANCELLED').length },
         ].map(tab => (
           <button
             key={tab.id}
@@ -120,7 +125,9 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
           {filteredBookings.map(booking => (
             <div
               key={booking.id}
-              className="tactile-card bg-[#10172A] rounded-3xl p-4 sm:p-5 border border-slate-800 shadow-xl flex flex-col gap-3"
+              className={`tactile-card bg-[#10172A] rounded-3xl p-4 sm:p-5 border shadow-xl flex flex-col gap-3 ${
+                booking.status === 'CANCELLED' ? 'border-red-500/30 opacity-90' : 'border-slate-800'
+              }`}
             >
               {/* Header card info */}
               <div className="flex items-start justify-between gap-2">
@@ -135,6 +142,12 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                         Espèces à encaisser
                       </span>
                     )}
+                    {booking.status === 'CANCELLED' && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" />
+                        Véhicule libéré
+                      </span>
+                    )}
                   </div>
                   <h3 className="text-base font-extrabold text-white mt-1">
                     {booking.vehicleName}
@@ -145,6 +158,26 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                   {booking.totalAmount.toFixed(2)} DT
                 </span>
               </div>
+
+              {/* Cancellation detail banner if cancelled */}
+              {booking.status === 'CANCELLED' && (
+                <div className="p-3 rounded-2xl bg-red-950/20 border border-red-500/20 text-xs text-red-300 space-y-1">
+                  <div className="font-bold flex items-center gap-1.5 text-red-400">
+                    <Ban className="w-3.5 h-3.5" />
+                    Réservation annulée
+                    {booking.cancelledAt && (
+                      <span className="text-[10px] text-gray-400 font-normal">
+                        ({new Date(booking.cancelledAt).toLocaleDateString('fr-FR')})
+                      </span>
+                    )}
+                  </div>
+                  {booking.cancellationReason && (
+                    <p className="text-gray-300 text-[11px] pl-5 italic">
+                      Motif : {booking.cancellationReason}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Vehicle & Client specs row */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-[#0A0E1A] p-3 rounded-2xl border border-slate-800 text-xs">
@@ -188,6 +221,19 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                   </TactileButton>
                 )}
 
+                {/* Cancel Booking action if still active or pending */}
+                {booking.status !== 'CANCELLED' && booking.status !== 'COMPLETED' && (
+                  <button
+                    type="button"
+                    onClick={() => setBookingToCancel(booking)}
+                    title="Annuler cette réservation"
+                    className="min-h-[56px] px-3.5 rounded-2xl bg-red-950/30 border border-red-500/30 text-red-400 hover:bg-red-900/40 hover:text-red-300 flex items-center justify-center gap-1.5 text-xs font-bold active:scale-95 transition-all"
+                  >
+                    <Ban className="w-4 h-4" />
+                    <span className="hidden sm:inline">Annuler</span>
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={() => onOpenInvoice(booking.id)}
@@ -200,6 +246,14 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
             </div>
           ))}
         </div>
+      )}
+
+      {/* Cancel Reservation Modal */}
+      {bookingToCancel && (
+        <CancelBookingModal
+          booking={bookingToCancel}
+          onClose={() => setBookingToCancel(null)}
+        />
       )}
     </div>
   );

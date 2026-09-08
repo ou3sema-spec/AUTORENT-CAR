@@ -24,6 +24,13 @@ interface BookingContextType {
   completeCheckOut: (checkOutData: Omit<CheckOut, 'id' | 'timestamp'>) => CheckOut;
   extras: ExtraItem[];
   generateInvoice: (bookingId: string) => Invoice;
+  cancelBooking: (
+    bookingId: string,
+    reason?: string,
+    refundAmount?: number,
+    cancellationFee?: number,
+    cancelledBy?: string
+  ) => Promise<{ success: boolean; error?: string }>;
 }
 
 const BookingContext = createContext<BookingContextType | undefined>(undefined);
@@ -339,6 +346,88 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     [bookings, clients, vehicles, extras, currentAgency]
   );
 
+  const cancelBooking = useCallback(
+    async (
+      bookingId: string,
+      reason: string = 'Annulation manuelle',
+      refundAmount?: number,
+      cancellationFee?: number,
+      cancelledBy: string = 'Agent'
+    ): Promise<{ success: boolean; error?: string }> => {
+      const targetBk = bookings.find((b) => b.id === bookingId);
+      if (!targetBk) {
+        return { success: false, error: 'Réservation introuvable' };
+      }
+
+      const cancelledAt = new Date().toISOString();
+      const updatedBooking: Booking = {
+        ...targetBk,
+        status: 'CANCELLED',
+        cancellationReason: reason,
+        cancelledAt,
+        cancelledBy,
+        cancellationFee: cancellationFee !== undefined ? cancellationFee : targetBk.cancellationFee,
+        refundAmount: refundAmount !== undefined ? refundAmount : targetBk.refundAmount,
+        paymentStatus:
+          refundAmount !== undefined && refundAmount > 0
+            ? refundAmount >= (targetBk.paidAmount || targetBk.totalAmount)
+              ? 'REFUNDED'
+              : 'PARTIALLY_PAID'
+            : targetBk.paymentStatus === 'PAID'
+            ? 'PAID'
+            : 'CANCELLED',
+        notes: targetBk.notes
+          ? `${targetBk.notes}\n[Annulé le ${new Date().toLocaleDateString('fr-FR')}: ${reason}]`
+          : `[Annulé le ${new Date().toLocaleDateString('fr-FR')}: ${reason}]`,
+        updatedAt: cancelledAt,
+      };
+
+      setBookings((prev) =>
+        prev.map((b) => (b.id === bookingId ? updatedBooking : b))
+      );
+
+      try {
+        await setFirestoreDoc('bookings', bookingId, updatedBooking);
+      } catch (e) {
+        console.warn('Failed to sync cancelled booking to Firestore:', e);
+      }
+
+      // Automatically release the vehicle back to AVAILABLE
+      if (targetBk.vehicleId) {
+        updateVehicleStatus(targetBk.vehicleId, 'AVAILABLE');
+        const vehicle = vehicles.find((v) => v.id === targetBk.vehicleId);
+        if (vehicle) {
+          try {
+            await setFirestoreDoc('vehicles', vehicle.id, {
+              ...vehicle,
+              status: 'AVAILABLE',
+            });
+          } catch (e) {}
+        }
+      }
+
+      if (selectedBookingForCheckIn?.id === bookingId) {
+        setSelectedBookingForCheckIn(null);
+      }
+      if (selectedBookingForCheckOut?.id === bookingId) {
+        setSelectedBookingForCheckOut(null);
+      }
+
+      toast.success(
+        `Réservation ${targetBk.bookingNumber} annulée avec succès. Véhicule ${targetBk.vehicleName || ''} libéré.`
+      );
+      return { success: true };
+    },
+    [
+      bookings,
+      vehicles,
+      updateVehicleStatus,
+      selectedBookingForCheckIn,
+      selectedBookingForCheckOut,
+      toast,
+    ]
+  );
+
   return (
     <BookingContext.Provider
       value={{
@@ -358,6 +447,7 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         completeCheckOut,
         extras,
         generateInvoice,
+        cancelBooking,
       }}
     >
       {children}

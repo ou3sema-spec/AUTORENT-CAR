@@ -13,6 +13,7 @@ export const useBooking = () => {
     addBooking,
     updateBookingStatus,
     generateInvoice,
+    cancelBooking,
     setSelectedBookingForCheckIn,
     setSelectedBookingForCheckOut,
     setActiveTab,
@@ -203,6 +204,7 @@ export const useBooking = () => {
     addBooking,
     updateBookingStatus,
     generateInvoice,
+    cancelBooking,
     startCheckInFlow,
     startCheckOutFlow,
   };

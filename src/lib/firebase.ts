@@ -29,7 +29,7 @@ export const firebaseConfig = {
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfigData.storageBucket || "auto-rent-car.firebasestorage.app",
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfigData.messagingSenderId || "883024856330",
   appId: import.meta.env.VITE_FIREBASE_APP_ID || firebaseConfigData.appId || "1:883024856330:web:b4459bf8ce1a444ddb66f3",
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || firebaseConfigData.measurementId || "G-AUTORENT01",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || firebaseConfigData.measurementId || "G-1X6M7HNB92",
 };
 
 // Initialize Firebase App

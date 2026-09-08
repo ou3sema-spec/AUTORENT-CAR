@@ -21,10 +21,12 @@ import {
   Sparkles,
   Printer,
   ChevronRight,
-  Maximize2
+  Maximize2,
+  Ban,
 } from 'lucide-react';
 import { TactileButton } from '../ui/TactileButton';
 import { StatusBadge } from '../ui/StatusBadge';
+import { CancelBookingModal } from '../bookings/CancelBookingModal';
 
 interface RentedCarDetailModalProps {
   booking: Booking;
@@ -55,6 +57,7 @@ export const RentedCarDetailModal: React.FC<RentedCarDetailModalProps> = ({
   const [selectedPhotoKey, setSelectedPhotoKey] = useState<string>('front');
   const [zoomPhotoUrl, setZoomPhotoUrl] = useState<{ url: string; title: string; subtitle?: string } | null>(null);
   const [photoComparisonMode, setPhotoComparisonMode] = useState<'CHECKIN' | 'CHECKOUT' | 'SPLIT'>('CHECKIN');
+  const [showCancelModal, setShowCancelModal] = useState<boolean>(false);
 
   const vehicle = vehicles.find(v => v.id === booking.vehicleId);
   const client = clients.find(c => c.id === booking.clientId);
@@ -148,6 +151,32 @@ export const RentedCarDetailModal: React.FC<RentedCarDetailModalProps> = ({
             </button>
           ))}
         </div>
+
+        {/* Cancellation status banner if cancelled */}
+        {booking.status === 'CANCELLED' && (
+          <div className="mx-4 sm:mx-6 mt-3 p-3.5 rounded-2xl bg-red-950/30 border border-red-500/30 text-xs text-red-300 flex items-start gap-2.5">
+            <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <div className="font-bold text-red-200 flex items-center gap-2">
+                <span>Réservation Annulée</span>
+                {booking.cancelledAt && (
+                  <span className="text-[10px] text-gray-400 font-normal">
+                    (le {new Date(booking.cancelledAt).toLocaleDateString('fr-FR')})
+                  </span>
+                )}
+              </div>
+              {booking.cancellationReason && (
+                <p className="text-gray-200 text-[11px]">
+                  Motif : <span className="text-white italic">{booking.cancellationReason}</span>
+                </p>
+              )}
+              <p className="text-emerald-400 text-[11px] font-semibold flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Véhicule remis au statut Disponible pour de nouvelles réservations.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Tab Content Body */}
         <div className="p-4 sm:p-5 flex-1 overflow-y-auto flex flex-col gap-4">

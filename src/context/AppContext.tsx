@@ -74,6 +74,13 @@ export interface AppContextType {
   completeCheckOut: (checkOutData: Omit<CheckOut, 'id' | 'timestamp'>) => CheckOut;
   extras: ExtraItem[];
   generateInvoice: (bookingId: string) => Invoice;
+  cancelBooking: (
+    bookingId: string,
+    reason?: string,
+    refundAmount?: number,
+    cancellationFee?: number,
+    cancelledBy?: string
+  ) => Promise<{ success: boolean; error?: string }>;
 
   // Maintenance
   maintenances: MaintenanceRecord[];
