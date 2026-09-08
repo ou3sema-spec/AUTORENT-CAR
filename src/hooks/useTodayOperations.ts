@@ -1,5 +1,5 @@
-import { useContext, useEffect, useState, useCallback } from 'react';
-import { BookingContext } from '../context/BookingContext';
+import { useEffect, useState, useCallback } from 'react';
+import { useBookings } from '../context/BookingContext';
 import { Booking } from '../types';
 
 /**
@@ -17,7 +17,7 @@ export interface TodayOperations {
 }
 
 export function useTodayOperations(): TodayOperations {
-  const { bookings } = useContext(BookingContext);
+  const { bookings } = useBookings();
   const [todayBookings, setTodayBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -33,8 +33,8 @@ export function useTodayOperations(): TodayOperations {
       const todayTime = today.getTime();
 
       const filtered = bookings.filter((booking) => {
-        const checkInDate = new Date(booking.checkInDate);
-        const checkOutDate = new Date(booking.checkOutDate);
+        const checkInDate = new Date(booking.startDate);
+        const checkOutDate = new Date(booking.endDate);
         
         // Normalize dates to start of day for comparison
         const checkInDay = new Date(
@@ -64,7 +64,7 @@ export function useTodayOperations(): TodayOperations {
   const getCheckIns = useCallback((): Booking[] => {
     const today = getTodayDate();
     return todayBookings.filter((booking) => {
-      const checkInDate = new Date(booking.checkInDate);
+      const checkInDate = new Date(booking.startDate);
       const checkInDay = new Date(
         checkInDate.getFullYear(),
         checkInDate.getMonth(),
@@ -77,7 +77,7 @@ export function useTodayOperations(): TodayOperations {
   const getCheckOuts = useCallback((): Booking[] => {
     const today = getTodayDate();
     return todayBookings.filter((booking) => {
-      const checkOutDate = new Date(booking.checkOutDate);
+      const checkOutDate = new Date(booking.endDate);
       const checkOutDay = new Date(
         checkOutDate.getFullYear(),
         checkOutDate.getMonth(),
@@ -90,10 +90,10 @@ export function useTodayOperations(): TodayOperations {
   const getOverdue = useCallback((): Booking[] => {
     const now = new Date();
     return todayBookings.filter((booking) => {
-      const checkOutDate = new Date(booking.checkOutDate);
+      const checkOutDate = new Date(booking.endDate);
       return (
-        booking.status !== 'completed' &&
-        booking.status !== 'cancelled' &&
+        booking.status !== 'COMPLETED' &&
+        booking.status !== 'CANCELLED' &&
         checkOutDate < now
       );
     });
