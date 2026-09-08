@@ -1,0 +1,155 @@
+{
+  "entities": {
+    "Vehicle": {
+      "title": "Vehicle",
+      "description": "Fleet vehicle record in AUTORENT CAR TUNISIA",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "brand": { "type": "string" },
+        "model": { "type": "string" },
+        "plate": { "type": "string" },
+        "category": { "type": "string" },
+        "year": { "type": "number" },
+        "status": { "type": "string", "enum": ["AVAILABLE", "RESERVED", "PREPARING", "RENTED", "RETURNED", "INSPECTION", "MAINTENANCE", "BLOCKED"] },
+        "mileage": { "type": "number" },
+        "fuelLevel": { "type": "number" },
+        "fuelType": { "type": "string" },
+        "transmission": { "type": "string" },
+        "agencyId": { "type": "string" },
+        "agencyName": { "type": "string" },
+        "dailyRate": { "type": "number" },
+        "deposit": { "type": "number" },
+        "insuranceRate": { "type": "number" },
+        "nextMaintenance": { "type": "string" },
+        "imageUrl": { "type": "string" }
+      },
+      "required": ["id", "brand", "model", "plate", "status", "dailyRate"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "Car rental reservation and contract state",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "bookingNumber": { "type": "string" },
+        "clientId": { "type": "string" },
+        "clientName": { "type": "string" },
+        "clientEmail": { "type": "string" },
+        "clientPhone": { "type": "string" },
+        "vehicleId": { "type": "string" },
+        "vehicleName": { "type": "string" },
+        "startDate": { "type": "string" },
+        "startTime": { "type": "string" },
+        "endDate": { "type": "string" },
+        "endTime": { "type": "string" },
+        "pickupLocation": { "type": "string" },
+        "returnLocation": { "type": "string" },
+        "status": { "type": "string", "enum": ["QUOTE", "PENDING", "CONFIRMED", "CHECKED_IN", "ACTIVE", "RETURNED", "COMPLETED", "CANCELLED"] },
+        "totalPrice": { "type": "number" },
+        "depositAmount": { "type": "number" },
+        "paidAmount": { "type": "number" },
+        "paymentStatus": { "type": "string", "enum": ["PENDING", "AUTHORIZED", "PAID", "PARTIALLY_PAID", "REFUNDED", "FAILED", "CANCELLED"] },
+        "hasGps": { "type": "boolean" },
+        "hasChildSeat": { "type": "boolean" },
+        "hasExtraDriver": { "type": "boolean" },
+        "hasFullInsurance": { "type": "boolean" },
+        "agreementSigned": { "type": "boolean" },
+        "signedAt": { "type": "string" }
+      },
+      "required": ["id", "bookingNumber", "clientId", "vehicleId", "startDate", "endDate", "status"]
+    },
+    "Client": {
+      "title": "Client",
+      "description": "Customer profile and identity details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "cinOrPassport": { "type": "string" },
+        "licenseNumber": { "type": "string" },
+        "nationality": { "type": "string" },
+        "totalRentals": { "type": "number" }
+      },
+      "required": ["id", "firstName", "lastName", "email", "phone"]
+    },
+    "Invoice": {
+      "title": "Invoice",
+      "description": "Billing invoice for rental contract",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "invoiceNumber": { "type": "string" },
+        "bookingId": { "type": "string" },
+        "clientId": { "type": "string" },
+        "clientName": { "type": "string" },
+        "amount": { "type": "number" },
+        "taxAmount": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "currency": { "type": "string" },
+        "status": { "type": "string", "enum": ["DRAFT", "ISSUED", "PAID", "PARTIALLY_PAID", "OVERDUE", "VOID"] },
+        "issuedAt": { "type": "string" },
+        "dueDate": { "type": "string" }
+      },
+      "required": ["id", "invoiceNumber", "bookingId", "clientId", "totalAmount", "status"]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "Financial transaction record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "bookingId": { "type": "string" },
+        "invoiceId": { "type": "string" },
+        "clientId": { "type": "string" },
+        "amount": { "type": "number" },
+        "method": { "type": "string" },
+        "status": { "type": "string", "enum": ["PENDING", "AUTHORIZED", "PAID", "PARTIALLY_PAID", "REFUNDED", "FAILED", "CANCELLED"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "bookingId", "amount", "method", "status"]
+    },
+    "DamageRecord": {
+      "title": "DamageRecord",
+      "description": "Vehicle damage tracking incident",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "vehicleId": { "type": "string" },
+        "bookingId": { "type": "string" },
+        "inspectionId": { "type": "string" },
+        "location": { "type": "string" },
+        "description": { "type": "string" },
+        "severity": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
+        "status": { "type": "string", "enum": ["OPEN", "ASSESSED", "REPAIRING", "RESOLVED", "CHARGED_TO_CUSTOMER"] },
+        "repairCost": { "type": "number" },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "resolvedAt": { "type": "string" }
+      },
+      "required": ["id", "vehicleId", "location", "severity", "status"]
+    },
+    "ActivityLog": {
+      "title": "ActivityLog",
+      "description": "Immutable operational audit trail event",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "actor": { "type": "string" },
+        "actorRole": { "type": "string" },
+        "action": { "type": "string" },
+        "details": { "type": "string" },
+        "targetType": { "type": "string" },
+        "targetId": { "type": "string" }
+      },
+      "required": ["id", "timestamp", "actor", "action"]
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}

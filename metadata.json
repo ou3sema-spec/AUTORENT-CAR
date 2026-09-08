@@ -1,0 +1,7 @@
+{
+  "name": "AUTORENT CAR TUNISIA",
+  "description": "Production-ready vehicle rental and fleet management platform for AUTORENT CAR TUNISIA.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
