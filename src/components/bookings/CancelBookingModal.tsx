@@ -144,7 +144,7 @@ export const CancelBookingModal: React.FC<CancelBookingModalProps> = ({
               </div>
               <div className="text-right">
                 <div className="text-xs font-bold text-emerald-400 font-mono">
-                  {booking.totalAmount.toFixed(2)} DT
+                  {(booking?.totalAmount || 0).toFixed(2)} DT
                 </div>
                 <div className="text-[10px] text-gray-400">
                   {booking.paymentStatus === 'PAID' ? 'Payé' : 'Paiement en attente'}

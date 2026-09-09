@@ -249,7 +249,7 @@ export const PinLockScreen: React.FC<PinLockScreenProps> = ({
                   <div className="flex items-center gap-1">
                     <Icon className="w-3.5 h-3.5" />
                     <span className="text-xs font-bold leading-tight truncate max-w-[90px]">
-                      {u.name.split(' ')[0]}
+                      {u?.name ? u.name.split(' ')[0] : 'Utilisateur'}
                     </span>
                   </div>
                   <span className="text-[9px] uppercase font-mono tracking-tighter opacity-80">

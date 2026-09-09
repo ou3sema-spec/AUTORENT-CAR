@@ -204,7 +204,7 @@ export const ClientPortalView: React.FC = () => {
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-            Bienvenue, <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-200">{currentUser.name.split(' ')[0]}</span> 👋
+            Bienvenue, <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-200">{currentUser?.name ? currentUser.name.split(' ')[0] : 'Client'}</span> 👋
           </h1>
           <p className="text-sm text-slate-300">
             Retrouvez tous vos contrats de location, justificatifs et paiements sécurisés.
@@ -250,7 +250,7 @@ export const ClientPortalView: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
             <div className="md:col-span-1 rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 h-44 relative">
               <img
-                src={nextRental.vehicleImageUrl || nextVehicle?.images[0] || 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?w=800&auto=format&fit=crop&q=80'}
+                src={nextRental.vehicleImageUrl || nextVehicle?.images?.[0] || 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?w=800&auto=format&fit=crop&q=80'}
                 alt={nextRental.vehicleName}
                 className="w-full h-full object-cover"
               />

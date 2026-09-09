@@ -58,17 +58,17 @@ const CheckInRouteWrapper: React.FC<{
   onSuccess: (bookingId: string) => void;
 }> = ({ onSuccess }) => {
   const { bookingId } = useParams<{ bookingId?: string }>();
-  const { bookings, setSelectedBookingForCheckIn } = useApp();
+  const { bookings, selectedBookingForCheckIn, setSelectedBookingForCheckIn } = useApp();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (bookingId) {
       const b = bookings.find((item) => item.id === bookingId || item.bookingNumber === bookingId);
-      if (b) {
+      if (b && selectedBookingForCheckIn?.id !== b.id) {
         setSelectedBookingForCheckIn(b);
       }
     }
-  }, [bookingId, bookings, setSelectedBookingForCheckIn]);
+  }, [bookingId, bookings, selectedBookingForCheckIn, setSelectedBookingForCheckIn]);
 
   return (
     <CheckInFlow
@@ -90,17 +90,17 @@ const CheckOutRouteWrapper: React.FC<{
   onSuccess: (bookingId: string) => void;
 }> = ({ onSuccess }) => {
   const { bookingId } = useParams<{ bookingId?: string }>();
-  const { bookings, setSelectedBookingForCheckOut } = useApp();
+  const { bookings, selectedBookingForCheckOut, setSelectedBookingForCheckOut } = useApp();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (bookingId) {
       const b = bookings.find((item) => item.id === bookingId || item.bookingNumber === bookingId);
-      if (b) {
+      if (b && selectedBookingForCheckOut?.id !== b.id) {
         setSelectedBookingForCheckOut(b);
       }
     }
-  }, [bookingId, bookings, setSelectedBookingForCheckOut]);
+  }, [bookingId, bookings, selectedBookingForCheckOut, setSelectedBookingForCheckOut]);
 
   return (
     <CheckOutFlow
@@ -156,15 +156,14 @@ const AppContent: React.FC = () => {
     ];
 
     if (validTabs.includes(path)) {
-      if (path === 'portal') {
-        setActiveTab('client_portal');
-      } else {
-        setActiveTab(path as any);
+      const targetTab = path === 'portal' ? 'client_portal' : (path as any);
+      if (activeTab !== targetTab) {
+        setActiveTab(targetTab);
       }
-    } else if (location.pathname === '/') {
+    } else if (location.pathname === '/' && activeTab !== 'dashboard') {
       setActiveTab('dashboard');
     }
-  }, [location.pathname, setActiveTab]);
+  }, [location.pathname, activeTab, setActiveTab]);
 
   // When activeTab changes programmatically (e.g. from bottom nav or context), navigate to route
   const handleTabChange = (tab: typeof activeTab) => {

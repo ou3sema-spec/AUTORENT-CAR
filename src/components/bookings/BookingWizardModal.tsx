@@ -58,8 +58,10 @@ export const BookingWizardModal: React.FC<BookingWizardModalProps> = ({
     vehicles.find(v => v.status === 'AVAILABLE') ||
     vehicles[0];
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle>(initialVehicle);
-  const [startDate, setStartDate] = useState('2026-09-02');
-  const [endDate, setEndDate] = useState('2026-09-05');
+  const defaultStart = new Date().toISOString().split('T')[0];
+  const defaultEnd = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const [startDate, setStartDate] = useState(defaultStart);
+  const [endDate, setEndDate] = useState(defaultEnd);
   const [startTime, setStartTime] = useState('10:00');
   const [endTime, setEndTime] = useState('18:00');
   const [selectedExtras, setSelectedExtras] = useState<string[]>(['ext-all-inclusive']);
@@ -91,6 +93,7 @@ export const BookingWizardModal: React.FC<BookingWizardModalProps> = ({
 
   const availableVehiclesList = vehicles.filter(v => {
     if (vehicleCategoryFilter !== 'ALL' && v.category !== vehicleCategoryFilter) return false;
+    if (v.status !== 'AVAILABLE' && v.id !== preSelectedVehicleId) return false;
     return isVehicleAvailable(v.id, startDate, endDate);
   });
 
@@ -142,7 +145,7 @@ export const BookingWizardModal: React.FC<BookingWizardModalProps> = ({
         vehicleId: selectedVehicle.id,
         vehicleName: `${selectedVehicle.brand} ${selectedVehicle.model}`,
         vehiclePlate: selectedVehicle.plate,
-        vehicleImageUrl: selectedVehicle.images[0] || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=800',
+        vehicleImageUrl: selectedVehicle?.images?.[0] || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=800',
         agencyId: currentAgency.id,
         startDate,
         endDate,
@@ -315,8 +318,8 @@ export const BookingWizardModal: React.FC<BookingWizardModalProps> = ({
                         >
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl bg-indigo-600/30 text-indigo-300 font-bold flex items-center justify-center border border-indigo-500/30">
-                              {client.firstName[0]}
-                              {client.lastName[0]}
+                              {client?.firstName?.[0] || 'C'}
+                              {client?.lastName?.[0] || ''}
                             </div>
                             <div>
                               <p className="text-sm font-extrabold text-white">
@@ -434,7 +437,7 @@ export const BookingWizardModal: React.FC<BookingWizardModalProps> = ({
                         >
                           <div className="flex items-center gap-3">
                             <img
-                              src={veh.images[0]}
+                              src={veh?.images?.[0] || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=800'}
                               alt={veh.model}
                               className="w-14 h-14 rounded-xl object-cover border border-slate-700"
                             />
@@ -446,7 +449,7 @@ export const BookingWizardModal: React.FC<BookingWizardModalProps> = ({
                                 {veh.plate}
                               </span>
                               <p className="text-xs font-black text-emerald-400 mt-0.5">
-                                {veh.dailyRate.toFixed(2)} DT / jour
+                                {(veh?.dailyRate || 0).toFixed(2)} DT / jour
                               </p>
                             </div>
                           </div>
@@ -481,7 +484,7 @@ export const BookingWizardModal: React.FC<BookingWizardModalProps> = ({
                             >
                               <div className="flex items-center gap-2.5 min-w-0">
                                 <img
-                                  src={veh.images[0]}
+                                  src={veh?.images?.[0] || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=800'}
                                   alt={veh.model}
                                   className="w-10 h-10 rounded-lg object-cover grayscale"
                                 />
@@ -533,10 +536,10 @@ export const BookingWizardModal: React.FC<BookingWizardModalProps> = ({
                         </div>
                         <div className="text-right flex-shrink-0">
                           <span className="text-xs font-black text-indigo-400">
-                            +{totalForExtra.toFixed(2)} DT
+                            +{(totalForExtra || 0).toFixed(2)} DT
                           </span>
                           <p className="text-[10px] text-slate-500 font-mono">
-                            {extra.pricePerDay.toFixed(2)} DT/j
+                            {(extra?.pricePerDay || 0).toFixed(2)} DT/j
                           </p>
                         </div>
                       </div>
@@ -558,33 +561,33 @@ export const BookingWizardModal: React.FC<BookingWizardModalProps> = ({
                       Devis Facture
                     </span>
                     <h4 className="text-base font-extrabold text-white">
-                      {selectedVehicle.brand} {selectedVehicle.model} ({selectedVehicle.plate})
+                      {selectedVehicle?.brand} {selectedVehicle?.model} ({selectedVehicle?.plate})
                     </h4>
                     <p className="text-xs text-slate-400">
                       Client : {selectedClient?.firstName} {selectedClient?.lastName}
                     </p>
                   </div>
                   <span className="text-xl font-black font-mono text-emerald-400">
-                    {pricing.totalAmount.toFixed(2)} DT
+                    {(pricing?.totalAmount || 0).toFixed(2)} DT
                   </span>
                 </div>
 
                 <div className="text-xs text-slate-300 flex flex-col gap-1">
                   <div className="flex justify-between">
-                    <span>Location ({durationDays} jours x {pricing.dailyRate.toFixed(2)} DT)</span>
-                    <span className="font-mono">{pricing.rentalSubtotal.toFixed(2)} DT</span>
+                    <span>Location ({durationDays} jours x {(pricing?.dailyRate || 0).toFixed(2)} DT)</span>
+                    <span className="font-mono">{(pricing?.rentalSubtotal || 0).toFixed(2)} DT</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Options & Assurances ({selectedExtras.length})</span>
-                    <span className="font-mono">{pricing.extrasTotal.toFixed(2)} DT</span>
+                    <span className="font-mono">{(pricing?.extrasTotal || 0).toFixed(2)} DT</span>
                   </div>
                   <div className="flex justify-between">
                     <span>TVA (20%)</span>
-                    <span className="font-mono">{pricing.tax.toFixed(2)} DT</span>
+                    <span className="font-mono">{(pricing?.tax || 0).toFixed(2)} DT</span>
                   </div>
                   <div className="flex justify-between font-bold text-amber-300 pt-1 border-t border-slate-800">
                     <span>Caution à bloquer (Dépôt de garantie)</span>
-                    <span className="font-mono">{pricing.depositAmount.toFixed(2)} DT</span>
+                    <span className="font-mono">{(pricing?.depositAmount || 0).toFixed(2)} DT</span>
                   </div>
                 </div>
               </div>

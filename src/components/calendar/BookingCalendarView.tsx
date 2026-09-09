@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBookings, useFleet, useApp } from '../../context/AppContext';
 import {
@@ -85,8 +85,10 @@ export const BookingCalendarView: React.FC<BookingCalendarViewProps> = ({
   // Automated lifecycle sweep on calendar load:
   // - Overdue confirmed bookings without checkin -> auto CANCEL & vehicle AVAILABLE
   // - Bookings with arrival end date reached -> auto COMPLETE & vehicle AVAILABLE
+  const hasSweptLifecycleRef = useRef(false);
   useEffect(() => {
-    if (checkAllBookingsLifecycle) {
+    if (!hasSweptLifecycleRef.current && checkAllBookingsLifecycle) {
+      hasSweptLifecycleRef.current = true;
       checkAllBookingsLifecycle();
     }
   }, [checkAllBookingsLifecycle]);
@@ -208,8 +210,10 @@ export const BookingCalendarView: React.FC<BookingCalendarViewProps> = ({
 
   const categories = useMemo(() => {
     const set = new Set<string>();
-    vehicles.forEach((v: Vehicle) => set.add(v.category));
-    return Array.from(set);
+    vehicles.forEach((v: Vehicle) => {
+      if (v?.category) set.add(v.category);
+    });
+    return Array.from(set).filter(Boolean);
   }, [vehicles]);
 
   const getStatusBadge = (status: Booking['status']) => {
@@ -262,8 +266,9 @@ export const BookingCalendarView: React.FC<BookingCalendarViewProps> = ({
   };
 
   const formatSelectedDateHuman = (dateStr: string) => {
+    if (!dateStr) return '';
     try {
-      const [y, m, d] = dateStr.split('-').map(Number);
+      const [y, m, d] = (dateStr || '').split('-').map(Number);
       const dateObj = new Date(y, m - 1, d);
       return new Intl.DateTimeFormat('fr-FR', {
         weekday: 'long',
@@ -373,9 +378,9 @@ export const BookingCalendarView: React.FC<BookingCalendarViewProps> = ({
               aria-label="Filtrer par catégorie"
               className="px-2.5 py-1.5 rounded-lg bg-slate-800 text-slate-200 text-xs font-medium border border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             >
-              <option value="ALL">Toutes catégories</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
+              <option key="ALL" value="ALL">Toutes catégories</option>
+              {categories.map((cat, idx) => (
+                <option key={`cat-${cat || idx}`} value={cat}>
                   {cat}
                 </option>
               ))}
@@ -388,11 +393,11 @@ export const BookingCalendarView: React.FC<BookingCalendarViewProps> = ({
               aria-label="Filtrer par statut"
               className="px-2.5 py-1.5 rounded-lg bg-slate-800 text-slate-200 text-xs font-medium border border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             >
-              <option value="ALL">Tous statuts</option>
-              <option value="CONFIRMED">Réservation faite (Bleu)</option>
-              <option value="IN_PROGRESS">Check-in validé (Vert)</option>
-              <option value="COMPLETED">Check-out / Échéance (Jaune)</option>
-              <option value="CANCELLED">Annulée (Rouge)</option>
+              <option key="ALL" value="ALL">Tous statuts</option>
+              <option key="CONFIRMED" value="CONFIRMED">Réservation faite (Bleu)</option>
+              <option key="IN_PROGRESS" value="IN_PROGRESS">Check-in validé (Vert)</option>
+              <option key="COMPLETED" value="COMPLETED">Check-out / Échéance (Jaune)</option>
+              <option key="CANCELLED" value="CANCELLED">Annulée (Rouge)</option>
             </select>
 
             {/* New Booking quick action */}
@@ -1253,7 +1258,7 @@ export const BookingCalendarView: React.FC<BookingCalendarViewProps> = ({
                   )}
                   {activeBookingModal.cancelledAt && (
                     <p className="text-slate-400 text-[10px]">
-                      Annulée le {new Date(activeBookingModal.cancelledAt).toLocaleString('fr-FR')} {activeBookingModal.cancelledBy ? `par ${activeBookingModal.cancelledBy}` : ''}
+                      Annulée le {activeBookingModal.cancelledAt ? new Date(activeBookingModal.cancelledAt).toLocaleString('fr-FR') : ''} {activeBookingModal.cancelledBy ? `par ${activeBookingModal.cancelledBy}` : ''}
                     </p>
                   )}
                   <p className="text-emerald-400 text-[11px] font-semibold flex items-center gap-1 mt-1">

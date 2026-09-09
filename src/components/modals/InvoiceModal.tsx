@@ -202,20 +202,20 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ bookingId, onClose }
                   <p className="text-white font-medium">Location véhicule ({booking.vehicleName})</p>
                   <p className="text-[10px] text-slate-400">Kilométrage contractuel inclus ({booking.includedKm || 250} km/j)</p>
                 </div>
-                <span className="col-span-2 text-center font-mono">{booking.durationDays} j</span>
-                <span className="col-span-2 text-right font-mono">{(booking.dailyRate / 1.2).toFixed(2)} DT</span>
-                <span className="col-span-2 text-right font-mono">{(booking.rentalSubtotal / 1.2).toFixed(2)} DT</span>
+                <span className="col-span-2 text-center font-mono">{booking.durationDays || 1} j</span>
+                <span className="col-span-2 text-right font-mono">{((booking?.dailyRate || 0) / 1.2).toFixed(2)} DT</span>
+                <span className="col-span-2 text-right font-mono">{((booking?.rentalSubtotal || 0) / 1.2).toFixed(2)} DT</span>
               </div>
 
-              {booking.extrasTotal > 0 && (
+              {(booking.extrasTotal || 0) > 0 && (
                 <div className="grid grid-cols-12 p-3 border-b border-slate-800/60 items-center">
                   <div className="col-span-6">
                     <p className="text-white font-medium">Pack Assurance Tous Risques & Zéro Franchise</p>
                     <p className="text-[10px] text-slate-400">Couverture complète et rachat de franchise</p>
                   </div>
                   <span className="col-span-2 text-center font-mono">1</span>
-                  <span className="col-span-2 text-right font-mono">{(booking.extrasTotal / 1.2).toFixed(2)} DT</span>
-                  <span className="col-span-2 text-right font-mono">{(booking.extrasTotal / 1.2).toFixed(2)} DT</span>
+                  <span className="col-span-2 text-right font-mono">{((booking?.extrasTotal || 0) / 1.2).toFixed(2)} DT</span>
+                  <span className="col-span-2 text-right font-mono">{((booking?.extrasTotal || 0) / 1.2).toFixed(2)} DT</span>
                 </div>
               )}
 
@@ -223,15 +223,15 @@ export const InvoiceModal: React.FC<InvoiceModalProps> = ({ bookingId, onClose }
               <div className="p-4 bg-[#131B2E] flex flex-col gap-1.5 font-mono">
                 <div className="flex justify-between">
                   <span className="text-slate-400">Total Hors Taxes</span>
-                  <span>{(booking.totalAmount / 1.2).toFixed(2)} DT</span>
+                  <span>{((booking?.totalAmount || 0) / 1.2).toFixed(2)} DT</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">TVA (20%)</span>
-                  <span>{(booking.totalAmount - (booking.totalAmount / 1.2)).toFixed(2)} DT</span>
+                  <span>{((booking?.totalAmount || 0) - ((booking?.totalAmount || 0) / 1.2)).toFixed(2)} DT</span>
                 </div>
                 <div className="flex justify-between text-base font-black text-emerald-400 pt-2 border-t border-slate-800">
                   <span>TOTAL TTC</span>
-                  <span>{booking.totalAmount.toFixed(2)} DT</span>
+                  <span>{(booking?.totalAmount || 0).toFixed(2)} DT</span>
                 </div>
               </div>
             </div>

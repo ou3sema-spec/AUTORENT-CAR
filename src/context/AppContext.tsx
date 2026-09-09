@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Agency,
@@ -158,7 +158,7 @@ const CombinedBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const handleSetActiveTab = useCallback(
     (tab: AppContextType['activeTab']) => {
-      setActiveTab(tab);
+      setActiveTab((prev) => (prev === tab ? prev : tab));
       const targetPath = tab === 'client_portal' ? '/portal' : `/${tab}`;
       if (location.pathname !== targetPath && !location.pathname.startsWith(targetPath + '/')) {
         navigate(targetPath);
@@ -171,33 +171,50 @@ const CombinedBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ child
     localStorage.setItem('autofleet_pro_notifs', JSON.stringify(notifications));
   }, [notifications]);
 
-  const markNotificationAsRead = (id: string) => {
+  const markNotificationAsRead = useCallback((id: string) => {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
-  };
+  }, []);
 
-  const markAllNotificationsAsRead = () => {
+  const markAllNotificationsAsRead = useCallback(() => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-  };
+  }, []);
 
-  const deleteNotification = (id: string) => {
+  const deleteNotification = useCallback((id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
-  };
+  }, []);
 
-  const combinedValue: AppContextType = {
-    ...authSlice,
-    ...agencySlice,
-    ...fleetSlice,
-    ...clientSlice,
-    ...bookingSlice,
-    ...maintenanceSlice,
-    ...syncSlice,
-    notifications,
-    markNotificationAsRead,
-    markAllNotificationsAsRead,
-    deleteNotification,
-    activeTab,
-    setActiveTab: handleSetActiveTab,
-  };
+  const combinedValue = useMemo<AppContextType>(
+    () => ({
+      ...authSlice,
+      ...agencySlice,
+      ...fleetSlice,
+      ...clientSlice,
+      ...bookingSlice,
+      ...maintenanceSlice,
+      ...syncSlice,
+      notifications,
+      markNotificationAsRead,
+      markAllNotificationsAsRead,
+      deleteNotification,
+      activeTab,
+      setActiveTab: handleSetActiveTab,
+    }),
+    [
+      authSlice,
+      agencySlice,
+      fleetSlice,
+      clientSlice,
+      bookingSlice,
+      maintenanceSlice,
+      syncSlice,
+      notifications,
+      markNotificationAsRead,
+      markAllNotificationsAsRead,
+      deleteNotification,
+      activeTab,
+      handleSetActiveTab,
+    ]
+  );
 
   return (
     <CombinedAppContext.Provider value={combinedValue}>

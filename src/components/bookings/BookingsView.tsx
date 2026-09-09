@@ -155,7 +155,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                 </div>
 
                 <span className="text-base font-black font-mono text-emerald-400">
-                  {booking.totalAmount.toFixed(2)} DT
+                  {(booking.totalAmount || 0).toFixed(2)} DT
                 </span>
               </div>
 

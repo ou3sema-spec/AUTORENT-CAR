@@ -225,23 +225,27 @@ export function generateContractPdf({
   y += 7;
 
   // Table Rows
+  const dailyRateHT = ((booking?.dailyRate || 0) / 1.2).toFixed(2);
+  const rentalSubtotalHT = ((booking?.rentalSubtotal || 0) / 1.2).toFixed(2);
+  const extrasHT = ((booking?.extrasTotal || 0) / 1.2).toFixed(2);
+
   const items = [
     {
       desc: `Location de véhicule de tourisme : ${booking.vehicleName} [${booking.vehiclePlate}]`,
-      subDesc: `Tarif journalier base de ${(booking.dailyRate / 1.2).toFixed(2)} DT HT • Forfait kilométrique inclus`,
-      qty: `${booking.durationDays} j`,
-      pu: `${(booking.dailyRate / 1.2).toFixed(2)} DT`,
-      total: `${(booking.rentalSubtotal / 1.2).toFixed(2)} DT`,
+      subDesc: `Tarif journalier base de ${dailyRateHT} DT HT • Forfait kilométrique inclus`,
+      qty: `${booking.durationDays || 1} j`,
+      pu: `${dailyRateHT} DT`,
+      total: `${rentalSubtotalHT} DT`,
     },
   ];
 
-  if (booking.extrasTotal > 0) {
+  if ((booking.extrasTotal || 0) > 0) {
     items.push({
       desc: 'Pack Sérénité Assurance Tous Risques & Zéro Franchise',
       subDesc: 'Rachat partiel de franchise en cas de dommage responsable ou vol',
       qty: '1',
-      pu: `${(booking.extrasTotal / 1.2).toFixed(2)} DT`,
-      total: `${(booking.extrasTotal / 1.2).toFixed(2)} DT`,
+      pu: `${extrasHT} DT`,
+      total: `${extrasHT} DT`,
     });
   }
 
@@ -283,9 +287,10 @@ export function generateContractPdf({
   // 5. Financial Summary Block (Right Aligned)
   const totalBoxWidth = 80;
   const totalBoxX = pageWidth - margin - totalBoxWidth;
-  const totalHT = (booking.totalAmount / 1.2).toFixed(2);
-  const totalTVA = (booking.totalAmount - booking.totalAmount / 1.2).toFixed(2);
-  const totalTTC = booking.totalAmount.toFixed(2);
+  const safeTotal = booking?.totalAmount || 0;
+  const totalHT = (safeTotal / 1.2).toFixed(2);
+  const totalTVA = (safeTotal - safeTotal / 1.2).toFixed(2);
+  const totalTTC = safeTotal.toFixed(2);
 
   doc.setFillColor(...lightBg);
   doc.setDrawColor(...borderGrey);
@@ -425,10 +430,11 @@ export function printContractDocument(options: GenerateContractPdfOptions): Prom
   return new Promise((resolve) => {
     try {
       const { booking, agency, vehicle, client } = options;
-      const invoiceNumber = `INV-2026-${booking.bookingNumber.replace('BK-2026-', '')}`;
-      const totalHT = (booking.totalAmount / 1.2).toFixed(2);
-      const totalTVA = (booking.totalAmount - booking.totalAmount / 1.2).toFixed(2);
-      const totalTTC = booking.totalAmount.toFixed(2);
+      const invoiceNumber = `INV-2026-${(booking?.bookingNumber || booking?.id || '001').replace('BK-2026-', '')}`;
+      const safePrintTotal = booking?.totalAmount || 0;
+      const totalHT = (safePrintTotal / 1.2).toFixed(2);
+      const totalTVA = (safePrintTotal - safePrintTotal / 1.2).toFixed(2);
+      const totalTTC = safePrintTotal.toFixed(2);
 
       // Create an invisible iframe for direct printing
       const iframe = document.createElement('iframe');
@@ -734,20 +740,20 @@ export function printContractDocument(options: GenerateContractPdfOptions): Prom
               <strong>Location de véhicule de tourisme (${booking.vehicleName})</strong><br>
               <span style="color: #64748b; font-size: 10px;">Forfait kilométrique inclus • Entretien et assistance 24/7</span>
             </td>
-            <td class="text-center font-mono">${booking.durationDays} j</td>
-            <td class="text-right font-mono">${(booking.dailyRate / 1.2).toFixed(2)} DT</td>
-            <td class="text-right font-mono">${(booking.rentalSubtotal / 1.2).toFixed(2)} DT</td>
+            <td class="text-center font-mono">${booking.durationDays || 1} j</td>
+            <td class="text-right font-mono">${((booking?.dailyRate || 0) / 1.2).toFixed(2)} DT</td>
+            <td class="text-right font-mono">${((booking?.rentalSubtotal || 0) / 1.2).toFixed(2)} DT</td>
           </tr>
           ${
-            booking.extrasTotal > 0
+            (booking.extrasTotal || 0) > 0
               ? `<tr>
             <td>
               <strong>Pack Assurance Tous Risques & Zéro Franchise</strong><br>
               <span style="color: #64748b; font-size: 10px;">Rachat de franchise bris de glace, carrosserie et vol</span>
             </td>
             <td class="text-center font-mono">1</td>
-            <td class="text-right font-mono">${(booking.extrasTotal / 1.2).toFixed(2)} DT</td>
-            <td class="text-right font-mono">${(booking.extrasTotal / 1.2).toFixed(2)} DT</td>
+            <td class="text-right font-mono">${((booking?.extrasTotal || 0) / 1.2).toFixed(2)} DT</td>
+            <td class="text-right font-mono">${((booking?.extrasTotal || 0) / 1.2).toFixed(2)} DT</td>
           </tr>`
               : ''
           }

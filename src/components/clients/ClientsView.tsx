@@ -95,8 +95,8 @@ export const ClientsView: React.FC<ClientsViewProps> = ({
             >
               <div className="flex items-center gap-3.5">
                 <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white font-black text-base flex items-center justify-center flex-shrink-0">
-                  {client.firstName[0]}
-                  {client.lastName[0]}
+                  {client?.firstName?.[0] || 'C'}
+                  {client?.lastName?.[0] || ''}
                 </div>
 
                 <div>

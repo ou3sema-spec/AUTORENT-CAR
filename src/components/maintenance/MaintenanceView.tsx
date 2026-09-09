@@ -272,11 +272,11 @@ export const MaintenanceView: React.FC = () => {
                   <div className="mt-3 flex flex-col gap-1.5 text-xs text-gray-300">
                     <div className="flex justify-between font-mono">
                       <span className="text-gray-400">Compteur actuel :</span>
-                      <span className="font-bold text-white">{veh.mileage.toLocaleString()} km</span>
+                      <span className="font-bold text-white">{(veh?.mileage ?? 0).toLocaleString()} km</span>
                     </div>
                     <div className="flex justify-between font-mono">
                       <span className="text-gray-400">Prochaine vidange :</span>
-                      <span className="font-bold text-amber-300">{nextDue.toLocaleString()} km</span>
+                      <span className="font-bold text-amber-300">{(nextDue ?? 0).toLocaleString()} km</span>
                     </div>
 
                     {/* Progress indicator */}
@@ -404,7 +404,7 @@ export const MaintenanceView: React.FC = () => {
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-500 font-mono mt-1">
                         <span>Date : {m.serviceDate}</span>
                         <span>•</span>
-                        <span>Kilométrage : {m.mileageAtService.toLocaleString()} km</span>
+                        <span>Kilométrage : {(m?.mileageAtService ?? 0).toLocaleString()} km</span>
                         <span>•</span>
                         <span>Technicien : {m.technicianName}</span>
                         {m.invoiceRef && (
@@ -419,11 +419,11 @@ export const MaintenanceView: React.FC = () => {
 
                   <div className="flex sm:flex-col items-end justify-between sm:justify-center border-t sm:border-t-0 pt-2 sm:pt-0 border-gray-800">
                     <span className="text-base font-black text-emerald-400 font-mono">
-                      {m.cost.toFixed(2)} DT
+                      {(m.cost || 0).toFixed(2)} DT
                     </span>
                     {m.nextDueMileage && (
                       <span className="text-[10px] text-amber-400 font-mono">
-                        Rappel : {m.nextDueMileage.toLocaleString()} km
+                        Rappel : {(m.nextDueMileage ?? 0).toLocaleString()} km
                       </span>
                     )}
                   </div>
@@ -487,7 +487,7 @@ export const MaintenanceView: React.FC = () => {
                   className="h-10 px-3 rounded-xl bg-[#151B30] border border-gray-700 text-white font-medium focus:outline-none focus:border-blue-500"
                 >
                   {MAINTENANCE_TYPES.map(t => (
-                    <option key={t.type} value={t.type}>{t.label} (Intervalle: ~{t.intervalKm.toLocaleString()} km)</option>
+                    <option key={t.type} value={t.type}>{t.label} (Intervalle: ~{(t?.intervalKm ?? 0).toLocaleString()} km)</option>
                   ))}
                 </select>
               </div>

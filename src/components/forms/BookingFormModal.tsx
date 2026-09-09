@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Vehicle, Client } from '../../types';
 import { NewClientModal } from '../clients/NewClientModal';
+import { useBooking } from '../../hooks/useBooking';
 
 interface BookingFormModalProps {
   isOpen: boolean;
@@ -37,15 +38,13 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
   preselectedClientId,
 }) => {
   const { vehicles, clients, addBooking, addClient, currentAgency } = useApp();
+  const { isVehicleAvailable, getVehicleConflictInfo } = useBooking();
 
-  const availableVehicles = useMemo(() => {
-    return [...vehicles].sort((a, b) => {
-      if (a.id === preselectedVehicleId) return -1;
-      if (b.id === preselectedVehicleId) return 1;
-      if (a.status === 'AVAILABLE' && b.status !== 'AVAILABLE') return -1;
-      if (b.status === 'AVAILABLE' && a.status !== 'AVAILABLE') return 1;
-      return 0;
-    });
+  // Rule: Only include cars with status 'AVAILABLE' (or if explicitly preselected)
+  const baseAvailableVehicles = useMemo(() => {
+    return vehicles.filter(
+      (v) => v.status === 'AVAILABLE' || (preselectedVehicleId && v.id === preselectedVehicleId)
+    );
   }, [vehicles, preselectedVehicleId]);
 
   const defaultStartDate = preselectedStartDate || new Date().toISOString().split('T')[0];
@@ -65,7 +64,7 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
   } = useForm<BookingFormData>({
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
-      vehicleId: preselectedVehicleId || availableVehicles[0]?.id || '',
+      vehicleId: preselectedVehicleId || baseAvailableVehicles[0]?.id || '',
       clientId: preselectedClientId || clients[0]?.id || '',
       startDate: defaultStartDate,
       endDate: defaultEndDate,
@@ -74,7 +73,7 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
       pickupLocation: 'Aéroport Tunis-Carthage (TUN)',
       returnLocation: 'Aéroport Tunis-Carthage (TUN)',
       insuranceTier: 'STANDARD',
-      dailyRate: availableVehicles[0]?.dailyRate || 65,
+      dailyRate: baseAvailableVehicles[0]?.dailyRate || 65,
       depositAmount: 500,
       notes: '',
     },
@@ -93,6 +92,50 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
   const [quickLicense, setQuickLicense] = useState('');
   const [quickError, setQuickError] = useState('');
 
+  const watchedVehicleId = watch('vehicleId');
+  const watchedClientId = watch('clientId');
+  const watchedStartDate = watch('startDate');
+  const watchedEndDate = watch('endDate');
+  const watchedDailyRate = watch('dailyRate');
+
+  // Filter available vehicles: status 'AVAILABLE' and no date conflicts to avoid booking collisions
+  const availableVehicles = useMemo(() => {
+    return baseAvailableVehicles.filter((v) => {
+      // Must be AVAILABLE (or preselected)
+      if (v.status !== 'AVAILABLE' && v.id !== preselectedVehicleId) {
+        return false;
+      }
+      // Check date availability
+      if (watchedStartDate && watchedEndDate) {
+        return isVehicleAvailable(v.id, watchedStartDate, watchedEndDate);
+      }
+      return true;
+    });
+  }, [baseAvailableVehicles, preselectedVehicleId, watchedStartDate, watchedEndDate, isVehicleAvailable]);
+
+  // Conflict detection for the actively selected vehicle
+  const selectedVehicleConflict = useMemo(() => {
+    if (!watchedVehicleId) return { hasConflict: false, reason: null };
+    const veh = vehicles.find((v) => v.id === watchedVehicleId);
+    if (!veh) return { hasConflict: true, reason: 'Véhicule introuvable' };
+    if (veh.status !== 'AVAILABLE' && veh.id !== preselectedVehicleId) {
+      return {
+        hasConflict: true,
+        reason: `Ce véhicule a le statut "${veh.status}" et n'est pas disponible pour une nouvelle réservation.`,
+      };
+    }
+    if (watchedStartDate && watchedEndDate) {
+      const conflict = getVehicleConflictInfo(veh.id, watchedStartDate, watchedEndDate);
+      if (conflict.hasConflict) {
+        return {
+          hasConflict: true,
+          reason: conflict.reason || 'Ce véhicule est indisponible sur cette période.',
+        };
+      }
+    }
+    return { hasConflict: false, reason: null };
+  }, [watchedVehicleId, vehicles, preselectedVehicleId, watchedStartDate, watchedEndDate, getVehicleConflictInfo]);
+
   // Re-sync form values whenever modal opens or preselected props change
   React.useEffect(() => {
     if (isOpen) {
@@ -101,7 +144,13 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
       d.setDate(d.getDate() + 3);
       const end = d.toISOString().split('T')[0];
 
-      const chosenVehicleId = preselectedVehicleId || availableVehicles[0]?.id || '';
+      // Find first vehicle with status AVAILABLE and no conflict
+      const validVehicles = baseAvailableVehicles.filter((v) =>
+        isVehicleAvailable(v.id, start, end)
+      );
+
+      const chosenVehicleId =
+        preselectedVehicleId || validVehicles[0]?.id || baseAvailableVehicles[0]?.id || '';
       const chosenVehicle = vehicles.find((v) => v.id === chosenVehicleId);
 
       reset({
@@ -114,20 +163,21 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
         pickupLocation: 'Aéroport Tunis-Carthage (TUN)',
         returnLocation: 'Aéroport Tunis-Carthage (TUN)',
         insuranceTier: 'STANDARD',
-        dailyRate: chosenVehicle?.dailyRate || availableVehicles[0]?.dailyRate || 65,
+        dailyRate: chosenVehicle?.dailyRate || validVehicles[0]?.dailyRate || 65,
         depositAmount: 500,
         notes: '',
       });
       setShowQuickAddClient(false);
       setJustAddedClient(null);
     }
-  }, [isOpen, preselectedStartDate, preselectedVehicleId, preselectedClientId, vehicles, clients, availableVehicles, reset]);
-
-  const watchedVehicleId = watch('vehicleId');
-  const watchedClientId = watch('clientId');
-  const watchedStartDate = watch('startDate');
-  const watchedEndDate = watch('endDate');
-  const watchedDailyRate = watch('dailyRate');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    isOpen,
+    preselectedStartDate,
+    preselectedVehicleId,
+    preselectedClientId,
+    reset,
+  ]);
 
   const selectedClient = useMemo(() => {
     return clients.find((c) => c.id === watchedClientId);
@@ -210,6 +260,11 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
     const client = clients.find((c) => c.id === data.clientId);
 
     if (!vehicle || !client) return;
+
+    if (selectedVehicleConflict.hasConflict) {
+      alert(selectedVehicleConflict.reason || 'Ce véhicule est indisponible sur ces dates.');
+      return;
+    }
 
     const rentalSubtotal = durationDays * data.dailyRate;
     const tax = rentalSubtotal * 0.2;
@@ -294,9 +349,14 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
           {/* Row 1: Vehicle & Client */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="booking-vehicle" className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
-                <Car className="w-3.5 h-3.5 text-blue-400" />
-                Véhicule *
+              <label htmlFor="booking-vehicle" className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Car className="w-3.5 h-3.5 text-blue-400" />
+                  Véhicule (Disponibles uniquement) *
+                </span>
+                <span className="text-[10px] text-emerald-400 font-medium font-mono">
+                  {availableVehicles.length} disponible{availableVehicles.length > 1 ? 's' : ''}
+                </span>
               </label>
               <select
                 id="booking-vehicle"
@@ -305,14 +365,26 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
                 aria-describedby={errors.vehicleId ? 'vehicleId-error' : undefined}
                 className="w-full rounded-xl bg-slate-800 border border-slate-700 px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">Sélectionner un véhicule</option>
-                {availableVehicles.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.brand} {v.model} ({v.plate}) — {v.dailyRate} €/j
+                <option value="">Sélectionner un véhicule disponible</option>
+                {availableVehicles.length === 0 ? (
+                  <option value="" disabled>
+                    Aucun véhicule disponible avec le statut Disponible
                   </option>
-                ))}
+                ) : (
+                  availableVehicles.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.brand} {v.model} ({v.plate}) — {v.dailyRate} DT/j • Disponible
+                    </option>
+                  ))
+                )}
               </select>
-              {errors.vehicleId && (
+              {selectedVehicleConflict.hasConflict && (
+                <div className="mt-1.5 p-2 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{selectedVehicleConflict.reason}</span>
+                </div>
+              )}
+              {errors.vehicleId && !selectedVehicleConflict.hasConflict && (
                 <p id="vehicleId-error" className="mt-1 text-[11px] text-rose-400 flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" />
                   {errors.vehicleId.message}
@@ -611,7 +683,7 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
             <div>
               <label htmlFor="booking-rate" className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
                 <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
-                Tarif / jour (€) *
+                Tarif / jour (DT) *
               </label>
               <input
                 id="booking-rate"
@@ -632,15 +704,15 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
                 {...register('insuranceTier')}
                 className="w-full rounded-xl bg-slate-800 border border-slate-700 px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="BASIC">Basique (Franchise 1500€)</option>
-                <option value="STANDARD">Standard (Franchise 800€)</option>
+                <option value="BASIC">Basique (Franchise 1500 DT)</option>
+                <option value="STANDARD">Standard (Franchise 800 DT)</option>
                 <option value="PREMIUM">Premium Zero Franchise</option>
               </select>
             </div>
 
             <div>
               <label htmlFor="booking-deposit" className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Dépôt Caution (€) *
+                Dépôt Caution (DT) *
               </label>
               <input
                 id="booking-deposit"
@@ -659,13 +731,13 @@ export const BookingFormModal: React.FC<BookingFormModalProps> = ({
                 Calcul Prévisionnel
               </span>
               <p className="text-xs text-slate-300 mt-0.5">
-                {durationDays} jour{durationDays > 1 ? 's' : ''} × {watchedDailyRate || 0} € + TVA 20%
+                {durationDays} jour{durationDays > 1 ? 's' : ''} × {watchedDailyRate || 0} DT + TVA 20%
               </p>
             </div>
             <div className="text-right">
               <span className="text-xs text-slate-400 block">Total TTC estimé</span>
               <span className="text-lg font-black text-emerald-400">
-                {estimatedTotal.toFixed(2)} €
+                {(estimatedTotal || 0).toFixed(2)} DT
               </span>
             </div>
           </div>

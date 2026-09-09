@@ -57,8 +57,8 @@ export const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
   const latestCheckOut = checkOuts.find(co => co.vehicleId === vehicle.id);
 
   const fallbackPhotos = {
-    front: vehicle.images[0] || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=800&auto=format&fit=crop&q=80',
-    rear: vehicle.images[1] || 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?w=800&auto=format&fit=crop&q=80',
+    front: vehicle?.images?.[0] || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=800&auto=format&fit=crop&q=80',
+    rear: vehicle?.images?.[1] || 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?w=800&auto=format&fit=crop&q=80',
     left: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&auto=format&fit=crop&q=80',
     right: 'https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?w=800&auto=format&fit=crop&q=80',
     interior: 'https://images.unsplash.com/photo-1563720223185-11003d516935?w=800&auto=format&fit=crop&q=80',
@@ -149,7 +149,7 @@ export const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
               {/* Photo hero */}
               <div className="relative rounded-2xl overflow-hidden border border-gray-800 h-48 bg-black/50">
                 <img
-                  src={vehicle.images[0]}
+                  src={vehicle?.images?.[0] || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=800'}
                   alt={vehicle.model}
                   className="w-full h-full object-cover"
                 />
@@ -196,7 +196,7 @@ export const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
                 <div className="bg-[#151B30] p-3 rounded-xl border border-gray-800 text-xs">
                   <span className="text-[10px] text-gray-400 uppercase font-bold">Compteur</span>
                   <p className="text-sm font-extrabold text-white font-mono mt-0.5">
-                    {vehicle.mileage.toLocaleString()} km
+                    {(vehicle?.mileage ?? 0).toLocaleString()} km
                   </p>
                 </div>
 
@@ -210,7 +210,7 @@ export const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
                 <div className="bg-[#151B30] p-3 rounded-xl border border-gray-800 text-xs">
                   <span className="text-[10px] text-gray-400 uppercase font-bold">Tarif Journalier</span>
                   <p className="text-sm font-extrabold text-emerald-400 font-mono mt-0.5">
-                    {vehicle.dailyRate.toFixed(2)} DT / jour
+                    {(vehicle?.dailyRate || 0).toFixed(2)} DT / jour
                   </p>
                 </div>
 

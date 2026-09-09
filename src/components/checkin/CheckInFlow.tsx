@@ -186,8 +186,8 @@ export const CheckInFlow: React.FC<CheckInFlowProps> = ({ onCancel, onSuccess })
       <div className="bg-[#10172A] rounded-3xl p-4 border border-slate-800 shadow-lg flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <img
-            src={activeVehicle.images[0]}
-            alt={activeVehicle.model}
+            src={activeVehicle?.images?.[0] || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=800'}
+            alt={activeVehicle?.model || 'Véhicule'}
             className="w-14 h-14 rounded-2xl object-cover border border-slate-700"
           />
           <div>
@@ -348,7 +348,7 @@ export const CheckInFlow: React.FC<CheckInFlowProps> = ({ onCancel, onSuccess })
                 </div>
               </div>
               <span className="text-xs font-mono text-slate-400 font-semibold">
-                Précédent : {activeVehicle.mileage.toLocaleString()} km
+                Précédent : {(activeVehicle?.mileage ?? 0).toLocaleString()} km
               </span>
             </div>
 
@@ -375,7 +375,7 @@ export const CheckInFlow: React.FC<CheckInFlowProps> = ({ onCancel, onSuccess })
       {currentStep === 4 && (
         <DamageVehicleDiagram
           damages={damages}
-          onAddDamage={dmg => setDamages(prev => [...prev, { ...dmg, id: `dmg-${Date.now()}`, addedAt: '2026-09-02' }])}
+          onAddDamage={dmg => setDamages(prev => [...prev, { ...dmg, id: `dmg-${Date.now()}`, addedAt: new Date().toISOString().split('T')[0] }])}
           onRemoveDamage={dmgId => setDamages(prev => prev.filter(d => d.id !== dmgId))}
         />
       )}

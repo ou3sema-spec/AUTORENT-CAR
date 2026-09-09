@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { Booking, CheckIn, CheckOut, ExtraItem, Invoice, Vehicle } from '../types';
 import { MOCK_BOOKINGS, MOCK_CHECKINS, MOCK_CHECKOUTS, MOCK_EXTRAS } from '../data/mockData';
 import { setFirestoreDoc, subscribeToCollection } from '../lib/firebase';
@@ -204,6 +204,7 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const checkAllBookingsLifecycle = useCallback((): number => {
     const today = new Date().toISOString().split('T')[0];
     let changedCount = 0;
+    const vehiclesToFree: string[] = [];
 
     setBookings((prev) => {
       let hasChanges = false;
@@ -211,15 +212,15 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if ((b.status === 'CONFIRMED' || b.status === 'PENDING') && b.startDate < today) {
           hasChanges = true;
           changedCount++;
+          vehiclesToFree.push(b.vehicleId);
           setFirestoreDoc('bookings', b.id, { status: 'CANCELLED' }).catch(() => {});
-          updateVehicleStatus(b.vehicleId, 'AVAILABLE');
           return { ...b, status: 'CANCELLED' as const };
         }
         if (b.status === 'IN_PROGRESS' && b.endDate <= today) {
           hasChanges = true;
           changedCount++;
+          vehiclesToFree.push(b.vehicleId);
           setFirestoreDoc('bookings', b.id, { status: 'COMPLETED' }).catch(() => {});
-          updateVehicleStatus(b.vehicleId, 'AVAILABLE');
           return { ...b, status: 'COMPLETED' as const };
         }
         return b;
@@ -227,6 +228,12 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       return hasChanges ? nextBookings : prev;
     });
+
+    if (vehiclesToFree.length > 0) {
+      vehiclesToFree.forEach((vId) => {
+        updateVehicleStatus(vId, 'AVAILABLE');
+      });
+    }
 
     return changedCount;
   }, [updateVehicleStatus]);
@@ -302,10 +309,10 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       const invoiceItems = [
         {
-          description: `Location véhicule ${vehicle?.brand} ${vehicle?.model} (${booking.durationDays} jours x ${booking.dailyRate.toFixed(2)} DT)`,
-          quantity: booking.durationDays,
-          unitPrice: booking.dailyRate,
-          total: booking.rentalSubtotal,
+          description: `Location véhicule ${vehicle?.brand} ${vehicle?.model} (${booking.durationDays || 1} jours x ${(booking?.dailyRate || 0).toFixed(2)} DT)`,
+          quantity: booking.durationDays || 1,
+          unitPrice: booking.dailyRate || 0,
+          total: booking.rentalSubtotal || 0,
         },
         ...booking.selectedExtras.map((extId) => {
           const ext = extras.find((e) => e.id === extId);
@@ -428,28 +435,47 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     ]
   );
 
+  const contextValue = useMemo<BookingContextType>(
+    () => ({
+      bookings,
+      addBooking,
+      updateBooking,
+      updateBookingStatus,
+      checkAndAutoUpdateBooking,
+      checkAllBookingsLifecycle,
+      selectedBookingForCheckIn,
+      setSelectedBookingForCheckIn,
+      selectedBookingForCheckOut,
+      setSelectedBookingForCheckOut,
+      checkIns,
+      checkOuts,
+      completeCheckIn,
+      completeCheckOut,
+      extras,
+      generateInvoice,
+      cancelBooking,
+    }),
+    [
+      bookings,
+      addBooking,
+      updateBooking,
+      updateBookingStatus,
+      checkAndAutoUpdateBooking,
+      checkAllBookingsLifecycle,
+      selectedBookingForCheckIn,
+      selectedBookingForCheckOut,
+      checkIns,
+      checkOuts,
+      completeCheckIn,
+      completeCheckOut,
+      extras,
+      generateInvoice,
+      cancelBooking,
+    ]
+  );
+
   return (
-    <BookingContext.Provider
-      value={{
-        bookings,
-        addBooking,
-        updateBooking,
-        updateBookingStatus,
-        checkAndAutoUpdateBooking,
-        checkAllBookingsLifecycle,
-        selectedBookingForCheckIn,
-        setSelectedBookingForCheckIn,
-        selectedBookingForCheckOut,
-        setSelectedBookingForCheckOut,
-        checkIns,
-        checkOuts,
-        completeCheckIn,
-        completeCheckOut,
-        extras,
-        generateInvoice,
-        cancelBooking,
-      }}
-    >
+    <BookingContext.Provider value={contextValue}>
       {children}
     </BookingContext.Provider>
   );

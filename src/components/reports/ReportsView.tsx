@@ -15,8 +15,8 @@ import {
 export const ReportsView: React.FC = () => {
   const { vehicles, bookings, clients, currentAgency } = useApp();
 
-  const totalTurnover = bookings.reduce((sum, b) => sum + b.totalAmount, 0);
-  const totalRentedDays = bookings.reduce((sum, b) => sum + b.durationDays, 0);
+  const totalTurnover = bookings.reduce((sum, b) => sum + (b?.totalAmount || 0), 0);
+  const totalRentedDays = bookings.reduce((sum, b) => sum + (b?.durationDays || 0), 0);
   const averageBasket = bookings.length > 0 ? totalTurnover / bookings.length : 0;
   const occupancyRate = vehicles.length > 0 ? Math.round((vehicles.filter(v => v.status === 'RENTED').length / vehicles.length) * 100) : 0;
 
@@ -42,7 +42,7 @@ export const ReportsView: React.FC = () => {
           <span className="text-xs font-bold text-emerald-400 uppercase">Chiffre d'Affaires</span>
           <div>
             <span className="text-2xl font-black font-mono text-white">
-              {totalTurnover.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} DT
+              {(totalTurnover || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} DT
             </span>
             <p className="text-[10px] text-emerald-400 font-bold flex items-center gap-0.5 mt-0.5">
               <TrendingUp className="w-3 h-3" /> +14.2% vs mois dernier
@@ -66,7 +66,7 @@ export const ReportsView: React.FC = () => {
           <span className="text-xs font-bold text-indigo-400 uppercase">Panier Moyen</span>
           <div>
             <span className="text-2xl font-black font-mono text-white">
-              {averageBasket.toFixed(2)} DT
+              {(averageBasket || 0).toFixed(2)} DT
             </span>
             <p className="text-[10px] text-slate-400 font-bold mt-0.5">
               Durée moy: ~3.2 jours
@@ -106,7 +106,7 @@ export const ReportsView: React.FC = () => {
                 <span className="w-7 h-7 rounded-xl bg-slate-800 text-slate-300 font-black text-xs flex items-center justify-center font-mono">
                   #{i + 1}
                 </span>
-                <img src={v.images[0]} alt={v.model} className="w-12 h-12 rounded-xl object-cover border border-slate-700" />
+                <img src={v?.images?.[0] || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=800'} alt={v.model} className="w-12 h-12 rounded-xl object-cover border border-slate-700" />
                 <div>
                   <p className="text-xs font-extrabold text-white">{v.brand} {v.model}</p>
                   <span className="font-mono text-[11px] text-cyan-400">{v.plate}</span>

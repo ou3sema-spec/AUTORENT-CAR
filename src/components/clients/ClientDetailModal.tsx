@@ -39,8 +39,8 @@ export const ClientDetailModal: React.FC<ClientDetailModalProps> = ({
         <div className="pt-safe px-5 py-4 bg-[#131E38] border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white font-black text-lg flex items-center justify-center">
-              {client.firstName[0]}
-              {client.lastName[0]}
+              {client?.firstName?.[0] || 'C'}
+              {client?.lastName?.[0] || ''}
             </div>
             <div>
               <h2 className="text-lg font-extrabold text-white">
@@ -128,7 +128,7 @@ export const ClientDetailModal: React.FC<ClientDetailModalProps> = ({
                     </p>
                   </div>
                   <div className="text-right">
-                    <span className="font-mono font-bold text-emerald-400">{bk.totalAmount.toFixed(2)} DT</span>
+                    <span className="font-mono font-bold text-emerald-400">{(bk?.totalAmount || 0).toFixed(2)} DT</span>
                     <div className="mt-1">
                       <StatusBadge status={bk.status} size="small" />
                     </div>

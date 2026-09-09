@@ -18,7 +18,7 @@ export const FuelGaugeSlider: React.FC<FuelGaugeSliderProps> = ({
   readOnly = false,
 }) => {
   const isElectric = fuelType === 'ELECTRIQUE';
-  const calculatedUnits = ((value / 100) * tankCapacity).toFixed(1);
+  const calculatedUnits = ((((value ?? 0) / 100) * (tankCapacity || 45)) || 0).toFixed(1);
 
   // Determine color based on fuel level
   const getColor = () => {

@@ -131,7 +131,7 @@ export const PlateScannerModal: React.FC<PlateScannerModalProps> = ({
                     Statut : <strong className="text-cyan-300">{matchedVehicle.status}</strong>
                   </p>
                 </div>
-                <img src={matchedVehicle.images[0]} alt={matchedVehicle.model} className="w-14 h-14 rounded-xl object-cover" />
+                <img src={matchedVehicle?.images?.[0] || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=800'} alt={matchedVehicle.model} className="w-14 h-14 rounded-xl object-cover" />
               </div>
 
               {matchedBooking ? (

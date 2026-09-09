@@ -344,7 +344,7 @@ export const DamageVehicleDiagram: React.FC<DamageVehicleDiagramProps> = ({
                     <p className="text-xs text-slate-400 mt-0.5">{damage.description}</p>
                     {damage.estimatedCost && damage.estimatedCost > 0 && (
                       <span className="text-[11px] font-mono text-amber-400 font-bold">
-                        Coût estimé : ~{damage.estimatedCost.toFixed(2)} DT
+                        Coût estimé : ~{(damage.estimatedCost || 0).toFixed(2)} DT
                       </span>
                     )}
                   </div>

@@ -124,7 +124,8 @@ export const AddEditVehicleModal: React.FC<AddEditVehicleModalProps> = ({
     setCategory(newCat);
     // If user hasn't explicitly customized the image or in add mode, suggest a photo matching new category
     if (!vehicleToEdit) {
-      setImageUrl(CATEGORY_IMAGE_PRESETS[newCat][0]);
+      const presetImg = CATEGORY_IMAGE_PRESETS[newCat]?.[0] || CATEGORY_IMAGE_PRESETS.CITADINE?.[0] || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=800';
+      setImageUrl(presetImg);
     }
   };
 

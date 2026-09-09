@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useBooking } from '../../hooks/useBooking';
 import { useAuth } from '../../hooks/useAuth';
@@ -23,12 +23,14 @@ import {
   Layers,
   Wrench,
   Eye,
-  Plus
+  Plus,
+  Ban
 } from 'lucide-react';
 import { TactileButton } from '../ui/TactileButton';
 import { StatusBadge } from '../ui/StatusBadge';
-import { Vehicle } from '../../types';
+import { Booking, Vehicle } from '../../types';
 import { VehicleDetailModal } from '../fleet/VehicleDetailModal';
+import { CancelBookingModal } from '../bookings/CancelBookingModal';
 
 interface DashboardViewProps {
   onOpenBookingWizard: (vehicleId?: string) => void;
@@ -64,6 +66,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [mobileOperationsFilter, setMobileOperationsFilter] = useState<'ALL' | 'CHECKIN' | 'CHECKOUT' | 'AVAILABLE' | 'FLEET'>('ALL');
   const [fleetSubFilter, setFleetSubFilter] = useState<'ALL' | 'AVAILABLE' | 'RESERVED' | 'RENTED' | 'MAINTENANCE'>('ALL');
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [bookingToCancel, setBookingToCancel] = useState<Booking | null>(null);
+
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
 
   // Fleet occupancy calculations
   const totalVehicles = vehicles.length;
@@ -72,6 +77,104 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const availableVehicles = vehicles.filter(v => v.status === 'AVAILABLE').length;
   const maintenanceVehicles = vehicles.filter(v => v.status === 'MAINTENANCE').length;
   const occupancyRate = totalVehicles > 0 ? Math.round((rentedVehicles / totalVehicles) * 100) : 0;
+
+  // Dynamic counts for 6 indicators
+  const overdueBookings = useMemo(() => {
+    return bookings.filter(
+      b => (b.status === 'IN_PROGRESS' || b.status === 'ACTIVE') && (b.endDate || '').split('T')[0] < todayStr
+    );
+  }, [bookings, todayStr]);
+
+  const unpaidBookings = useMemo(() => {
+    return bookings.filter(b => b.paymentStatus === 'PENDING' && b.status !== 'CANCELLED');
+  }, [bookings]);
+
+  const awaitingSignBookings = useMemo(() => {
+    return bookings.filter(b => !b.agreementSigned && b.status !== 'CANCELLED' && b.status !== 'COMPLETED');
+  }, [bookings]);
+
+  // Dynamic Priority Operations for Today
+  const todayPriorityOperations = useMemo(() => {
+    interface PriorityOp {
+      id: string;
+      booking: Booking;
+      type: 'PICKUP' | 'RETURN' | 'OVERDUE';
+      time: string;
+      priority: number;
+      title: string;
+      plate: string;
+      clientName: string;
+      paymentLabel: string;
+      isPaid: boolean;
+      agreementSigned: boolean;
+    }
+
+    const ops: PriorityOp[] = [];
+
+    bookings.forEach(bk => {
+      if (bk.status === 'CANCELLED' || bk.status === 'COMPLETED') return;
+
+      const bStart = (bk.startDate || '').split('T')[0];
+      const bEnd = (bk.endDate || '').split('T')[0];
+
+      // 1. Overdue returns
+      if ((bk.status === 'IN_PROGRESS' || bk.status === 'ACTIVE') && bEnd < todayStr) {
+        ops.push({
+          id: `op-overdue-${bk.id}`,
+          booking: bk,
+          type: 'OVERDUE',
+          time: `Retard (${bEnd})`,
+          priority: 1,
+          title: bk.vehicleName,
+          plate: bk.vehiclePlate,
+          clientName: bk.clientName,
+          paymentLabel: bk.paymentStatus === 'PAID' ? `Soldé (${bk.totalAmount} DT)` : `Solde dû (${bk.totalAmount} DT)`,
+          isPaid: bk.paymentStatus === 'PAID',
+          agreementSigned: !!bk.agreementSigned,
+        });
+      }
+      // 2. Pickups for today (starts today, or confirmed starting on/before today)
+      else if (
+        (bStart === todayStr || (bStart <= todayStr && bk.status === 'CONFIRMED')) &&
+        (bk.status === 'CONFIRMED' || bk.status === 'PENDING')
+      ) {
+        ops.push({
+          id: `op-pickup-${bk.id}`,
+          booking: bk,
+          type: 'PICKUP',
+          time: bk.startTime || '09:00',
+          priority: 2,
+          title: bk.vehicleName,
+          plate: bk.vehiclePlate,
+          clientName: bk.clientName,
+          paymentLabel: bk.paymentStatus === 'PAID' ? `Payé (${bk.totalAmount} DT)` : `Espèces (${bk.totalAmount} DT)`,
+          isPaid: bk.paymentStatus === 'PAID',
+          agreementSigned: !!bk.agreementSigned,
+        });
+      }
+      // 3. Returns for today
+      else if (bEnd === todayStr && (bk.status === 'IN_PROGRESS' || bk.status === 'ACTIVE')) {
+        ops.push({
+          id: `op-return-${bk.id}`,
+          booking: bk,
+          type: 'RETURN',
+          time: bk.endTime || '18:00',
+          priority: 3,
+          title: bk.vehicleName,
+          plate: bk.vehiclePlate,
+          clientName: bk.clientName,
+          paymentLabel: bk.paymentStatus === 'PAID' ? `Soldé (${bk.totalAmount} DT)` : `En cours (${bk.totalAmount} DT)`,
+          isPaid: bk.paymentStatus === 'PAID',
+          agreementSigned: !!bk.agreementSigned,
+        });
+      }
+    });
+
+    return ops.sort((a, b) => {
+      if (a.priority !== b.priority) return a.priority - b.priority;
+      return a.time.localeCompare(b.time);
+    });
+  }, [bookings, todayStr]);
 
   // Filtered items when searching plate or client
   const searchResults = searchTerm.trim()
@@ -128,7 +231,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </span>
             </div>
             <h1 className="text-xl sm:text-3xl font-black tracking-tight text-white mt-0.5">
-              Bonjour, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">{currentUser.name.split(' ')[0]}</span> 👋
+              Bonjour, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">{currentUser?.name ? currentUser.name.split(' ')[0] : 'Équipe'}</span> 👋
             </h1>
           </div>
 
@@ -303,7 +406,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             onClick={() => setMobileOperationsFilter('CHECKIN')}
             className="p-3 rounded-xl bg-slate-900/90 border border-emerald-500/30 hover:border-emerald-500/60 transition-all cursor-pointer flex flex-col"
           >
-            <span className="text-2xl font-black text-emerald-400 leading-none">6</span>
+            <span className="text-2xl font-black text-emerald-400 leading-none">{todayCheckIns.length}</span>
             <span className="text-[11px] font-bold text-slate-200 mt-1">Pickups</span>
             <span className="text-[9px] text-slate-400">Départs prévus</span>
           </div>
@@ -312,13 +415,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             onClick={() => setMobileOperationsFilter('CHECKOUT')}
             className="p-3 rounded-xl bg-slate-900/90 border border-blue-500/30 hover:border-blue-500/60 transition-all cursor-pointer flex flex-col"
           >
-            <span className="text-2xl font-black text-blue-400 leading-none">4</span>
+            <span className="text-2xl font-black text-blue-400 leading-none">{todayCheckOuts.length}</span>
             <span className="text-[11px] font-bold text-slate-200 mt-1">Returns</span>
             <span className="text-[9px] text-slate-400">Retours attendus</span>
           </div>
 
           <div className="p-3 rounded-xl bg-slate-900/90 border border-rose-500/40 hover:border-rose-500/70 transition-all cursor-pointer flex flex-col">
-            <span className="text-2xl font-black text-rose-400 leading-none">2</span>
+            <span className="text-2xl font-black text-rose-400 leading-none">{overdueBookings.length}</span>
             <span className="text-[11px] font-bold text-slate-200 mt-1">Overdue</span>
             <span className="text-[9px] text-rose-300/80">Véhicules en retard</span>
           </div>
@@ -330,7 +433,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             }}
             className="p-3 rounded-xl bg-slate-900/90 border border-amber-500/30 hover:border-amber-500/60 transition-all cursor-pointer flex flex-col"
           >
-            <span className="text-2xl font-black text-amber-400 leading-none">3</span>
+            <span className="text-2xl font-black text-amber-400 leading-none">{maintenanceVehicles}</span>
             <span className="text-[11px] font-bold text-slate-200 mt-1">Unavailable</span>
             <span className="text-[9px] text-slate-400">En maintenance</span>
           </div>
@@ -339,13 +442,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             onClick={() => setActiveTab('reports')}
             className="p-3 rounded-xl bg-slate-900/90 border border-purple-500/30 hover:border-purple-500/60 transition-all cursor-pointer flex flex-col"
           >
-            <span className="text-2xl font-black text-purple-400 leading-none">5</span>
+            <span className="text-2xl font-black text-purple-400 leading-none">{unpaidBookings.length}</span>
             <span className="text-[11px] font-bold text-slate-200 mt-1">Unpaid</span>
             <span className="text-[9px] text-slate-400">Factures à régler</span>
           </div>
 
           <div className="p-3 rounded-xl bg-slate-900/90 border border-cyan-500/30 hover:border-cyan-500/60 transition-all cursor-pointer flex flex-col">
-            <span className="text-2xl font-black text-cyan-400 leading-none">2</span>
+            <span className="text-2xl font-black text-cyan-400 leading-none">{awaitingSignBookings.length}</span>
             <span className="text-[11px] font-bold text-slate-200 mt-1">Awaiting Sign</span>
             <span className="text-[9px] text-slate-400">Contrats à signer</span>
           </div>
@@ -353,109 +456,125 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         {/* Timeline (Section 11) */}
         <div className="flex flex-col gap-2 pt-1">
-          <div className="flex items-center gap-2">
-            <Clock className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider font-mono">
-              Fil des Opérations Prioritaires du Jour
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Clock className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="text-xs font-bold text-slate-200 uppercase tracking-wider font-mono">
+                Fil des Opérations Prioritaires du Jour ({todayPriorityOperations.length})
+              </span>
+            </div>
+            <span className="text-[11px] font-mono text-slate-400">
+              {new Date().toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
             </span>
           </div>
 
-          <div className="flex flex-col gap-2">
-            {/* 09:00 Peugeot 208 - Pickup · Paid · Documents ✓ */}
-            <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 hover:border-emerald-500/40 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-              <div className="flex items-center gap-3">
-                <span className="px-2.5 py-1 rounded-lg bg-emerald-950 text-emerald-400 border border-emerald-700/50 text-xs font-mono font-black flex-shrink-0">
-                  09:00
-                </span>
-                <div>
-                  <h4 className="text-xs sm:text-sm font-bold text-white">
-                    Peugeot 208 Style PureTech <span className="font-mono text-slate-400 font-normal">(234 TUN 1084)</span>
-                  </h4>
-                  <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
-                    <span className="text-emerald-400 font-bold">Pickup</span>
-                    <span>·</span>
-                    <span className="text-emerald-300">Paid (695.50 DT)</span>
-                    <span>·</span>
-                    <span className="text-emerald-400 font-bold">Documents ✓</span>
-                    <span className="hidden sm:inline">· Ahmed Ben Salem</span>
-                  </div>
-                </div>
-              </div>
+          {todayPriorityOperations.length === 0 ? (
+            <div className="p-6 rounded-2xl bg-slate-950/70 border border-slate-800 text-center flex flex-col items-center justify-center gap-2">
+              <CheckCircle2 className="w-8 h-8 text-emerald-400 opacity-80" />
+              <p className="text-sm font-bold text-white">Toutes les opérations du jour sont à jour</p>
+              <p className="text-xs text-slate-400 max-w-md">
+                Aucun départ ni retour prioritaire en attente pour la journée. Créez une nouvelle réservation pour aujourd'hui pour la voir apparaître immédiatement ici.
+              </p>
               <button
                 type="button"
-                onClick={() => {
-                  const b = bookings.find(x => x.bookingNumber === 'AR-2026-1029');
-                  if (b) startCheckInFlow(b);
-                }}
-                className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer flex-shrink-0 shadow-md shadow-emerald-600/20"
+                onClick={() => onOpenBookingWizard()}
+                className="mt-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer"
               >
-                <Key className="w-3.5 h-3.5" />
-                <span>Valider Départ</span>
+                <Plus className="w-3.5 h-3.5" />
+                <span>Nouvelle Réservation</span>
               </button>
             </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {todayPriorityOperations.map(op => (
+                <div
+                  key={op.id}
+                  className={`p-3 sm:p-3.5 rounded-2xl bg-slate-950/80 border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md ${
+                    op.type === 'OVERDUE'
+                      ? 'border-rose-500/40 hover:border-rose-500/70'
+                      : op.type === 'PICKUP'
+                      ? 'border-emerald-500/30 hover:border-emerald-500/60'
+                      : 'border-blue-500/30 hover:border-blue-500/60'
+                  }`}
+                >
+                  <div className="flex items-start sm:items-center gap-3">
+                    <span
+                      className={`px-2.5 py-1.5 rounded-xl text-xs font-mono font-black flex-shrink-0 border ${
+                        op.type === 'OVERDUE'
+                          ? 'bg-rose-950/80 text-rose-300 border-rose-600/50'
+                          : op.type === 'PICKUP'
+                          ? 'bg-emerald-950/80 text-emerald-300 border-emerald-600/50'
+                          : 'bg-blue-950/80 text-blue-300 border-blue-600/50'
+                      }`}
+                    >
+                      {op.time}
+                    </span>
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2 flex-wrap">
+                        <span>{op.title}</span>
+                        <span className="font-mono text-slate-400 font-semibold text-[11px] px-2 py-0.5 rounded bg-slate-900 border border-slate-800">
+                          {op.plate}
+                        </span>
+                      </h4>
+                      <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-1 flex-wrap">
+                        <span
+                          className={`font-bold ${
+                            op.type === 'OVERDUE'
+                              ? 'text-rose-400'
+                              : op.type === 'PICKUP'
+                              ? 'text-emerald-400'
+                              : 'text-blue-400'
+                          }`}
+                        >
+                          {op.type === 'PICKUP' ? 'Pickup' : op.type === 'RETURN' ? 'Return' : 'Overdue'}
+                        </span>
+                        <span>·</span>
+                        <span className={op.isPaid ? 'text-emerald-300 font-medium' : 'text-amber-300 font-medium'}>
+                          {op.paymentLabel}
+                        </span>
+                        <span>·</span>
+                        <span className={op.agreementSigned ? 'text-emerald-400 font-medium' : 'text-rose-400 font-semibold'}>
+                          {op.agreementSigned ? 'Documents ✓' : 'Documents manquants ⚠️'}
+                        </span>
+                        <span className="hidden sm:inline">· {op.clientName}</span>
+                      </div>
+                    </div>
+                  </div>
 
-            {/* 10:30 Renault Clio - Return · Inspection pending */}
-            <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 hover:border-blue-500/40 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-              <div className="flex items-center gap-3">
-                <span className="px-2.5 py-1 rounded-lg bg-blue-950 text-blue-400 border border-blue-700/50 text-xs font-mono font-black flex-shrink-0">
-                  10:30
-                </span>
-                <div>
-                  <h4 className="text-xs sm:text-sm font-bold text-white">
-                    Renault Clio V Intens <span className="font-mono text-slate-400 font-normal">(228 TUN 7412)</span>
-                  </h4>
-                  <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
-                    <span className="text-blue-400 font-bold">Return</span>
-                    <span>·</span>
-                    <span className="text-amber-400 font-bold">Inspection pending</span>
-                    <span>·</span>
-                    <span className="text-slate-300">Sonia Guesmi</span>
-                  </div>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  const b = bookings.find(x => x.bookingNumber === 'AR-2026-1030');
-                  if (b) startCheckOutFlow(b);
-                }}
-                className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer flex-shrink-0 shadow-md shadow-blue-600/20"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Lancer Inspection Retour</span>
-              </button>
-            </div>
+                  <div className="flex items-center gap-2 self-end sm:self-auto flex-shrink-0">
+                    {op.type === 'PICKUP' ? (
+                      <button
+                        type="button"
+                        onClick={() => startCheckInFlow(op.booking)}
+                        className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-emerald-600/20 active:scale-95 transition-all"
+                      >
+                        <Key className="w-3.5 h-3.5" />
+                        <span>Valider Départ</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => startCheckOutFlow(op.booking)}
+                        className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-blue-600/20 active:scale-95 transition-all"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Lancer Inspection Retour</span>
+                      </button>
+                    )}
 
-            {/* 11:00 Peugeot 308 - Pickup · Documents missing ⚠️ */}
-            <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 hover:border-amber-500/40 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-              <div className="flex items-center gap-3">
-                <span className="px-2.5 py-1 rounded-lg bg-amber-950 text-amber-400 border border-amber-700/50 text-xs font-mono font-black flex-shrink-0">
-                  11:00
-                </span>
-                <div>
-                  <h4 className="text-xs sm:text-sm font-bold text-white">
-                    Volkswagen Golf 8 R-Line <span className="font-mono text-slate-400 font-normal">(239 TUN 9180)</span>
-                  </h4>
-                  <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
-                    <span className="text-amber-400 font-bold">Pickup</span>
-                    <span>·</span>
-                    <span className="text-rose-400 font-bold">Documents missing ⚠️</span>
-                    <span>·</span>
-                    <span className="text-amber-300">Contrat non signé</span>
-                    <span className="hidden sm:inline">· Mehdi Bouazizi</span>
+                    <button
+                      type="button"
+                      onClick={() => setBookingToCancel(op.booking)}
+                      className="p-2 rounded-xl bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-500/30 text-xs font-bold transition cursor-pointer active:scale-95"
+                      title="Annuler cette réservation"
+                    >
+                      <Ban className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setActiveTab('clients')}
-                className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer flex-shrink-0 shadow-md shadow-amber-600/20"
-              >
-                <AlertTriangle className="w-3.5 h-3.5" />
-                <span>Vérifier Documents</span>
-              </button>
+              ))}
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -855,7 +974,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                             referrerPolicy="no-referrer"
                           />
                           <span className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/80 backdrop-blur-sm text-[9px] font-mono font-bold text-cyan-300 rounded">
-                            {vehicle.dailyRate}€/j
+                            {vehicle.dailyRate} DT/j
                           </span>
                         </div>
 
@@ -877,7 +996,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           </h3>
 
                           <div className="flex items-center gap-3 text-xs text-gray-400 mt-0.5 flex-wrap">
-                            <span>{vehicle.mileage.toLocaleString()} km</span>
+                            <span>{(vehicle?.mileage ?? 0).toLocaleString()} km</span>
                             <span>•</span>
                             <span className="flex items-center gap-1">
                               {vehicle.fuelType === 'ELECTRIQUE' ? '⚡' : '⛽'} {vehicle.currentFuelLevel}% {vehicle.fuelType}
@@ -1019,7 +1138,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                             referrerPolicy="no-referrer"
                           />
                           <span className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/80 backdrop-blur-sm text-[9px] font-mono font-bold text-white rounded">
-                            {vehicle.dailyRate}€/j
+                            {vehicle.dailyRate} DT/j
                           </span>
                         </div>
 
@@ -1039,7 +1158,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           </h3>
 
                           <div className="flex items-center gap-3 text-xs text-gray-400 mt-0.5 flex-wrap">
-                            <span>{vehicle.mileage.toLocaleString()} km</span>
+                            <span>{(vehicle?.mileage ?? 0).toLocaleString()} km</span>
                             <span>•</span>
                             <span className="flex items-center gap-1">
                               {vehicle.fuelType === 'ELECTRIQUE' ? '⚡' : '⛽'} {vehicle.currentFuelLevel}% {vehicle.fuelType}
@@ -1264,6 +1383,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             setSelectedVehicle(null);
             onOpenBookingWizard(vehicleId);
           }}
+        />
+      )}
+
+      {/* Cancel Booking Modal */}
+      {bookingToCancel && (
+        <CancelBookingModal
+          booking={bookingToCancel}
+          onClose={() => setBookingToCancel(null)}
         />
       )}
     </div>

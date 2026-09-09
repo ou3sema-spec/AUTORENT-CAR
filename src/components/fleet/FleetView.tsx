@@ -160,7 +160,7 @@ export const FleetView: React.FC<FleetViewProps> = ({ onStartBooking }) => {
               <div className="flex items-center gap-3.5">
                 <div className="w-20 h-20 rounded-xl overflow-hidden bg-black/40 border border-gray-700 flex-shrink-0 relative">
                   <img
-                    src={vehicle.images[0]}
+                    src={vehicle?.images?.[0] || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=800'}
                     alt={vehicle.model}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
@@ -277,7 +277,7 @@ export const FleetView: React.FC<FleetViewProps> = ({ onStartBooking }) => {
             <div className="pt-2 border-t border-gray-800/80 flex items-center justify-between text-xs font-mono">
               <div className="flex items-center gap-1 text-gray-300">
                 <Gauge className="w-3.5 h-3.5 text-gray-500" />
-                <span>{vehicle.mileage.toLocaleString()} km</span>
+                <span>{(vehicle?.mileage ?? 0).toLocaleString()} km</span>
               </div>
 
               <div className="flex items-center gap-1 text-cyan-400">
@@ -286,7 +286,7 @@ export const FleetView: React.FC<FleetViewProps> = ({ onStartBooking }) => {
               </div>
 
               <div className="font-bold text-emerald-400 text-sm">
-                {vehicle.dailyRate.toFixed(2)} DT<span className="text-[10px] text-gray-500 font-normal">/j</span>
+                {(vehicle?.dailyRate || 0).toFixed(2)} DT<span className="text-[10px] text-gray-500 font-normal">/j</span>
               </div>
             </div>
           </div>

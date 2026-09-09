@@ -196,7 +196,7 @@ export const RentedCarDetailModal: React.FC<RentedCarDetailModalProps> = ({
                     </span>
                     <p className="text-[11px] text-gray-400 mt-0.5">
                       {checkIn
-                        ? `Capturées le ${new Date(checkIn.timestamp).toLocaleString('fr-FR')} par ${checkIn.agentName}`
+                        ? `Capturées le ${checkIn.timestamp ? new Date(checkIn.timestamp).toLocaleString('fr-FR') : ''} par ${checkIn.agentName || 'Agent'}`
                         : 'Prise de vue des 6 angles obligatoires lors du Check-In'}
                     </p>
                   </div>
@@ -333,7 +333,7 @@ export const RentedCarDetailModal: React.FC<RentedCarDetailModalProps> = ({
                     <div className="p-2.5 rounded-xl bg-[#0A0E1A] border border-gray-800">
                       <span className="text-[10px] text-gray-400 uppercase">Compteur départ</span>
                       <p className="font-mono font-black text-white text-base mt-0.5">
-                        {checkIn ? checkIn.mileage.toLocaleString() : vehicle?.mileage?.toLocaleString() || '18 420'} km
+                        {checkIn ? (checkIn.mileage ?? 0).toLocaleString() : (vehicle?.mileage ?? 0).toLocaleString() || '18 420'} km
                       </p>
                     </div>
 
@@ -376,7 +376,7 @@ export const RentedCarDetailModal: React.FC<RentedCarDetailModalProps> = ({
                         <div className="p-2.5 rounded-xl bg-[#0A0E1A] border border-gray-800">
                           <span className="text-[10px] text-gray-400 uppercase">Compteur retour</span>
                           <p className="font-mono font-black text-white text-base mt-0.5">
-                            {checkOut.mileage.toLocaleString()} km
+                            {(checkOut.mileage ?? 0).toLocaleString()} km
                           </p>
                           <span className="text-[10px] text-gray-400 font-mono">
                             (+{checkOut.mileage - checkOut.startMileage} km roulés)
@@ -401,7 +401,7 @@ export const RentedCarDetailModal: React.FC<RentedCarDetailModalProps> = ({
                       <div className="p-2 rounded-xl bg-[#0A0E1A] border border-gray-800 flex justify-between items-center">
                         <span className="text-gray-400">Caution restituée</span>
                         <span className="font-mono font-black text-emerald-400 text-sm">
-                          {checkOut.depositRefundAmount.toFixed(2)} DT
+                          {(checkOut.depositRefundAmount ?? 0).toFixed(2)} DT
                         </span>
                       </div>
                     </>
@@ -473,11 +473,11 @@ export const RentedCarDetailModal: React.FC<RentedCarDetailModalProps> = ({
                 </div>
                 <div className="bg-[#151B30] p-3 rounded-xl border border-gray-800">
                   <span className="text-[10px] text-gray-400 uppercase font-bold">Tarif Journalier</span>
-                  <p className="text-sm font-extrabold text-emerald-400 font-mono mt-0.5">{booking.dailyRate.toFixed(2)} DT / j</p>
+                  <p className="text-sm font-extrabold text-emerald-400 font-mono mt-0.5">{(booking?.dailyRate || 0).toFixed(2)} DT / j</p>
                 </div>
                 <div className="bg-[#151B30] p-3 rounded-xl border border-gray-800">
                   <span className="text-[10px] text-gray-400 uppercase font-bold">Caution Requise</span>
-                  <p className="text-sm font-extrabold text-amber-400 font-mono mt-0.5">{booking.depositAmount} DT</p>
+                  <p className="text-sm font-extrabold text-amber-400 font-mono mt-0.5">{booking?.depositAmount || 0} DT</p>
                 </div>
               </div>
 
@@ -510,8 +510,8 @@ export const RentedCarDetailModal: React.FC<RentedCarDetailModalProps> = ({
                 </div>
                 <div className="text-right">
                   <span className="text-[10px] text-gray-400 uppercase font-bold">Montant Total</span>
-                  <p className="text-lg font-black text-emerald-400 font-mono mt-0.5">{booking.totalAmount.toFixed(2)} DT</p>
-                  <p className="text-[11px] text-gray-400">Caution : {booking.depositAmount} DT</p>
+                  <p className="text-lg font-black text-emerald-400 font-mono mt-0.5">{(booking?.totalAmount || 0).toFixed(2)} DT</p>
+                  <p className="text-[11px] text-gray-400">Caution : {booking?.depositAmount || 0} DT</p>
                   <span className="mt-1 inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                     {booking.paymentStatus === 'PAID' ? 'Acquitté' : 'Paiement en attente'}
                   </span>
@@ -575,6 +575,18 @@ export const RentedCarDetailModal: React.FC<RentedCarDetailModalProps> = ({
             </TactileButton>
           )}
 
+          {booking.status !== 'CANCELLED' && booking.status !== 'COMPLETED' && (
+            <button
+              type="button"
+              onClick={() => setShowCancelModal(true)}
+              className="min-h-[48px] px-3.5 rounded-xl bg-red-950/40 border border-red-500/40 text-red-300 hover:bg-red-900/50 hover:text-red-200 flex items-center justify-center gap-1.5 text-xs font-bold active:scale-95 transition-all cursor-pointer"
+              title="Annuler cette réservation"
+            >
+              <Ban className="w-4 h-4 text-red-400" />
+              <span className="hidden sm:inline">Annuler</span>
+            </button>
+          )}
+
           {onOpenContract && (
             <button
               type="button"
@@ -590,6 +602,17 @@ export const RentedCarDetailModal: React.FC<RentedCarDetailModalProps> = ({
           )}
         </div>
       </div>
+
+      {/* CANCEL BOOKING MODAL */}
+      {showCancelModal && (
+        <CancelBookingModal
+          booking={booking}
+          onClose={() => {
+            setShowCancelModal(false);
+            onClose();
+          }}
+        />
+      )}
 
       {/* FULLSCREEN PHOTO ZOOM MODAL */}
       {zoomPhotoUrl && (

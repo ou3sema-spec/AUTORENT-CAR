@@ -188,8 +188,8 @@ export const CheckOutFlow: React.FC<CheckOutFlowProps> = ({ onCancel, onSuccess 
       <div className="bg-[#10172A] rounded-3xl p-4 border border-slate-800 shadow-lg flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <img
-            src={activeVehicle.images[0]}
-            alt={activeVehicle.model}
+            src={activeVehicle?.images?.[0] || 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=800'}
+            alt={activeVehicle?.model || 'Véhicule'}
             className="w-14 h-14 rounded-2xl object-cover border border-slate-700"
           />
           <div>
@@ -234,7 +234,7 @@ export const CheckOutFlow: React.FC<CheckOutFlowProps> = ({ onCancel, onSuccess 
               <div>
                 <span className="text-[10px] text-slate-400 font-bold uppercase">KM Départ</span>
                 <p className="font-mono font-bold text-white text-sm">
-                  {activeVehicle.mileage.toLocaleString()} km
+                  {(activeVehicle?.mileage ?? 0).toLocaleString()} km
                 </p>
               </div>
               <div>
@@ -266,7 +266,7 @@ export const CheckOutFlow: React.FC<CheckOutFlowProps> = ({ onCancel, onSuccess 
                   <AlertTriangle className="w-4 h-4 flex-shrink-0" />
                   <span>Dépassement : +{surchargeCalc.extraKm} km ({activeVehicle.excessKmRate} DT/km)</span>
                 </div>
-                <span className="font-mono text-sm font-black">+{surchargeCalc.extraKmCost.toFixed(2)} DT</span>
+                <span className="font-mono text-sm font-black">+{(surchargeCalc.extraKmCost || 0).toFixed(2)} DT</span>
               </div>
             ) : (
               <div className="p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-400 text-xs font-bold flex items-center gap-2">
@@ -289,11 +289,11 @@ export const CheckOutFlow: React.FC<CheckOutFlowProps> = ({ onCancel, onSuccess 
               <div className="flex items-center gap-2">
                 <Fuel className="w-4 h-4 flex-shrink-0" />
                 <span>
-                  Carburant manquant : -{surchargeCalc.missingFuelPercent}% (~{surchargeCalc.missingLiters.toFixed(1)}L @ {activeVehicle.fuelMissingRatePerLiter} DT/L)
+                  Carburant manquant : -{surchargeCalc.missingFuelPercent}% (~{(surchargeCalc.missingLiters || 0).toFixed(1)}L @ {activeVehicle.fuelMissingRatePerLiter} DT/L)
                 </span>
               </div>
               <span className="font-mono text-sm font-black">
-                +{surchargeCalc.missingFuelCost.toFixed(2)} DT
+                +{(surchargeCalc.missingFuelCost || 0).toFixed(2)} DT
               </span>
             </div>
           )}
@@ -308,7 +308,7 @@ export const CheckOutFlow: React.FC<CheckOutFlowProps> = ({ onCancel, onSuccess 
             onAddDamage={dmg =>
               setNewDamages(prev => [
                 ...prev,
-                { ...dmg, id: `dmg-new-${Date.now()}`, addedAt: '2026-09-02', addedByCheckType: 'CHECK_OUT' },
+                { ...dmg, id: `dmg-new-${Date.now()}`, addedAt: new Date().toISOString().split('T')[0], addedByCheckType: 'CHECK_OUT' },
               ])
             }
             onRemoveDamage={dmgId => setNewDamages(prev => prev.filter(d => d.id !== dmgId))}
@@ -355,34 +355,34 @@ export const CheckOutFlow: React.FC<CheckOutFlowProps> = ({ onCancel, onSuccess 
             <div className="flex flex-col gap-2 text-xs">
               <div className="flex justify-between text-slate-300">
                 <span>Caution initiale déposée</span>
-                <span className="font-mono font-bold">{activeBooking.depositAmount.toFixed(2)} DT</span>
+                <span className="font-mono font-bold">{(activeBooking?.depositAmount || 0).toFixed(2)} DT</span>
               </div>
 
               {surchargeCalc.extraKmCost > 0 && (
                 <div className="flex justify-between text-amber-400 font-bold">
                   <span>Excédent KM ({surchargeCalc.extraKm} km x {activeVehicle.excessKmRate} DT)</span>
-                  <span className="font-mono">- {surchargeCalc.extraKmCost.toFixed(2)} DT</span>
+                  <span className="font-mono">- {(surchargeCalc.extraKmCost || 0).toFixed(2)} DT</span>
                 </div>
               )}
 
               {surchargeCalc.missingFuelCost > 0 && (
                 <div className="flex justify-between text-rose-400 font-bold">
-                  <span>Carburant non réapprovisionné ({surchargeCalc.missingLiters.toFixed(1)}L)</span>
-                  <span className="font-mono">- {surchargeCalc.missingFuelCost.toFixed(2)} DT</span>
+                  <span>Carburant non réapprovisionné ({(surchargeCalc.missingLiters || 0).toFixed(1)}L)</span>
+                  <span className="font-mono">- {(surchargeCalc.missingFuelCost || 0).toFixed(2)} DT</span>
                 </div>
               )}
 
               {surchargeCalc.damageCost > 0 && (
                 <div className="flex justify-between text-rose-400 font-bold">
                   <span>Frais réparations nouveaux dommages</span>
-                  <span className="font-mono">- {surchargeCalc.damageCost.toFixed(2)} DT</span>
+                  <span className="font-mono">- {(surchargeCalc.damageCost || 0).toFixed(2)} DT</span>
                 </div>
               )}
 
               <div className="pt-2 border-t border-slate-800 flex justify-between items-center text-sm font-black">
                 <span className="text-white">Montant Caution à Restituer</span>
                 <span className="text-emerald-400 text-lg font-mono">
-                  {surchargeCalc.depositRefundAmount.toFixed(2)} DT
+                  {(surchargeCalc.depositRefundAmount || 0).toFixed(2)} DT
                 </span>
               </div>
             </div>
